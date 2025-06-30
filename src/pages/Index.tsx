@@ -89,7 +89,7 @@ const Index = () => {
                 </Button>
                 {/* BIG UPLOAD BUTTON - Full width, tall, with hover animation */}
 
-                {/* NEW: Clear Graph Button - Only show when there's data */}
+                {/*Clear Graph Button - Only show when there's data */}
                 {graphData && (
                   <Button
                     onClick={clearGraphData}
@@ -104,6 +104,15 @@ const Index = () => {
                     Clear Graph
                   </Button>
                 )}
+
+                {/* Graph Options - Only show when theres data */}
+
+
+
+
+
+
+
 
               </>
             )}
@@ -126,7 +135,7 @@ const Index = () => {
                 data={graphData}
                 isDarkMode={isDarkMode}
                 width="100%"
-                height="calc(100vh - 220px)" // Increased height to account for controls
+                height="calc(100vh - 105px)" // Increased height to account for controls
               />
             ) : (
               // Show placeholder when no data - FIXED: Removed extra header

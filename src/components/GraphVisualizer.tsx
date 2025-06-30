@@ -297,24 +297,6 @@ const GraphVisualizer = ({
     }
   };
 
-  if (!data) {
-    return (
-      <div 
-        className={`flex items-center justify-center border-2 border-dashed rounded-lg ${
-          isDarkMode 
-            ? 'border-gray-600 bg-gray-800 text-gray-400' 
-            : 'border-gray-300 bg-gray-50 text-gray-500'
-        }`}
-        style={{ width, height }}
-      >
-        <div className="text-center">
-          <p className="text-lg font-medium mb-2">No Graph Data</p>
-          <p className="text-sm">Upload a file to visualize your graph</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="relative">
       {/* Graph metadata display */}
