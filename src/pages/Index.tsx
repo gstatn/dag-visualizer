@@ -17,10 +17,10 @@ const Index = () => {
 
   // NEW: Handle when user uploads data
   const handleDataUploaded = (data: GraphData) => {
-    console.log("🎯 Index.tsx received graph data:", data);
-    console.log("📋 Setting graphData state...");
+    console.log("Index.tsx received graph data:", data);
+    console.log("Setting graphData state...");
     setGraphData(data);
-    console.log("✅ Graph data state updated");
+    console.log("Graph data state updated");
   };
 
   // NEW: Clear current graph data
@@ -43,7 +43,7 @@ const Index = () => {
       
       <div className="flex h-screen">
         {/* LEFT SECTION - Sidebar with tools (NEW: collapsible) */}
-        <div className={`transition-all duration-300 border-r-[2px] ${
+        <div className={`transition-all duration-300 border-r-[1px] ${
           sidebarCollapsed ? 'w-16' : 'w-80'
         } ${
           isDarkMode ? 'bg-gray-1000 border-gray-500' : 'bg-white border-gray-200'
@@ -118,10 +118,10 @@ const Index = () => {
           
           {/* NEW: Content Header */}
           <div className={`border-b p-4 ${
-            isDarkMode ? 'border-gray-700' : 'border-gray-200'
+            isDarkMode ? 'border-gray-500' : 'border-gray-200'
           }`}>
             <h1 className="text-2xl font-bold">
-              {graphData ? 'Graph Visualization' : 'DAG Visualizer'}
+              {graphData ? 'Graph Visualization' : 'Visualizer'}
             </h1>
             {graphData && (
               <p className={`text-sm mt-1 ${
@@ -159,7 +159,7 @@ const Index = () => {
                     Upload a graph file to visualize your data
                   </p>
                   <p className={`text-sm mt-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                    Supported formats: .txt, .json, .csv
+                    Supported formats: .txt, .json
                   </p>
                   {/* PLACEHOLDER TEXT - Tells user what this area is for */}
                 </div>
@@ -170,7 +170,7 @@ const Index = () => {
       </div>
 
       {/* SETTINGS BUTTON - Fixed position in bottom-left corner */}
-      <div className="fixed bottom-6 left-6">
+      <div className="fixed bottom-2 left-3">
         {/* Fixed positioning = stays in place when scrolling */}
         
         <Dialog>

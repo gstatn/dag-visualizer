@@ -15,6 +15,84 @@ interface GraphVisualizerProps {
   height?: string;
 }
 
+// Layout definitions with their configurations
+const AVAILABLE_LAYOUTS = {
+  dagre: {
+    name: 'Dagre',
+    description: 'Hierarchical layout ideal for DAGs and trees',
+    config: {
+      name: 'dagre',
+      rankDir: 'TB',
+      spacingFactor: 1.5,
+      nodeDimensionsIncludeLabels: true
+    } as cytoscape.LayoutOptions
+  },
+  circle: {
+    name: 'Circle',
+    description: 'Arranges nodes in a circle, good for showing connections',
+    config: {
+      name: 'circle',
+      radius: Math.min(300, window.innerWidth / 6),
+      startAngle: -Math.PI / 2
+    } as cytoscape.LayoutOptions
+  },
+  concentric: {
+    name: 'Concentric',
+    description: 'Concentric circles based on node importance',
+    config: {
+      name: 'concentric',
+      concentric: (node: cytoscape.NodeSingular) => node.degree(false),
+      levelWidth: () => 1,
+      spacingFactor: 1.5,
+      minNodeSpacing: 50
+    } as cytoscape.LayoutOptions
+  },
+  grid: {
+    name: 'Grid',
+    description: 'Organized grid layout, clean and systematic',
+    config: {
+      name: 'grid',
+      rows: undefined,
+      cols: undefined,
+      spacingFactor: 1.2
+    } as cytoscape.LayoutOptions
+  },
+  breadthfirst: {
+    name: 'Breadthfirst',
+    description: 'Tree-like layout using breadth-first traversal',
+    config: {
+      name: 'breadthfirst',
+      directed: true,
+      spacingFactor: 1.5,
+      avoidOverlap: true
+    } as cytoscape.LayoutOptions
+  },
+  cose: {
+    name: 'CoSE',
+    description: 'Force-directed layout, good for showing clusters',
+    config: {
+      name: 'cose',
+      idealEdgeLength: 100,
+      nodeOverlap: 20,
+      refresh: 20,
+      fit: true,
+      padding: 30,
+      randomize: false,
+      componentSpacing: 100,
+      nodeRepulsion: 400000,
+      edgeElasticity: 100,
+      nestingFactor: 5,
+      gravity: 80,
+      numIter: 1000,
+      initialTemp: 200,
+      coolingFactor: 0.95,
+      minTemp: 1.0
+    } as cytoscape.LayoutOptions
+  }
+} as const;
+
+type LayoutKey = keyof typeof AVAILABLE_LAYOUTS;
+
 const GraphVisualizer = ({ 
   data, 
   isDarkMode, 
@@ -24,6 +102,8 @@ const GraphVisualizer = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentLayout, setCurrentLayout] = useState<LayoutKey>('dagre');
+  const [isLayoutRunning, setIsLayoutRunning] = useState(false);
 
   // Initialize or update the graph when data changes
   useEffect(() => {
@@ -116,15 +196,10 @@ const GraphVisualizer = ({
           }
         }
       ],
-      layout: {
-        name: 'dagre',
-        rankDir: 'TB',
-        spacingFactor: 1.5,
-        nodeDimensionsIncludeLabels: true
-      } as cytoscape.LayoutOptions,
+      layout: AVAILABLE_LAYOUTS[currentLayout].config,
       // Interaction options
       userZoomingEnabled: true,
-      wheelSensitivity: 1, // Change this <------ ******************
+      wheelSensitivity: 5,
       userPanningEnabled: true,
       boxSelectionEnabled: true,
       selectionType: 'single',
@@ -138,13 +213,11 @@ const GraphVisualizer = ({
     cyRef.current.on('tap', 'node', (event) => {
       const node = event.target;
       console.log('Node clicked:', node.data());
-      // TODO: Add custom node click behavior here
     });
 
     cyRef.current.on('tap', 'edge', (event) => {
       const edge = event.target;
       console.log('Edge clicked:', edge.data());
-      // TODO: Add custom edge click behavior here
     });
 
     // Fit the graph to the container
@@ -159,7 +232,7 @@ const GraphVisualizer = ({
         cyRef.current = null;
       }
     };
-  }, [data, isDarkMode]);
+  }, [data, isDarkMode, currentLayout]);
 
   // Handle container resize
   useEffect(() => {
@@ -174,7 +247,27 @@ const GraphVisualizer = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Method to export graph as image (future feature)
+  // Apply layout change
+  const applyLayout = (layoutKey: LayoutKey) => {
+    if (!cyRef.current || isLayoutRunning) return;
+    
+    setIsLayoutRunning(true);
+    setCurrentLayout(layoutKey);
+    
+    const layoutConfig = AVAILABLE_LAYOUTS[layoutKey].config;
+    const layout = cyRef.current.layout(layoutConfig);
+    
+    layout.on('layoutstop', () => {
+      setIsLayoutRunning(false);
+      if (cyRef.current) {
+        cyRef.current.fit();
+      }
+    });
+    
+    layout.run();
+  };
+
+  // Method to export graph as image
   const exportImage = (format: 'png' | 'jpg' = 'png') => {
     if (cyRef.current) {
       const dataUrl = cyRef.current.png({
@@ -182,8 +275,16 @@ const GraphVisualizer = ({
         bg: isDarkMode ? '#1F2937' : '#FFFFFF',
         full: true
       }) as Blob;
-      // TODO: Implement download functionality
-      console.log('Export image:', dataUrl);
+      
+      // Create download link
+      const url = URL.createObjectURL(dataUrl);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `graph-${currentLayout}.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     }
   };
 
@@ -192,41 +293,6 @@ const GraphVisualizer = ({
     if (cyRef.current) {
       cyRef.current.fit();
       cyRef.current.center();
-    }
-  };
-
-  // Method to change layout (future feature)
-  const changeLayout = (layoutName: string) => {
-    if (cyRef.current) {
-      let layoutOptions: cytoscape.LayoutOptions;
-      
-      switch (layoutName) {
-        case 'dagre':
-          layoutOptions = {
-            name: 'dagre',
-            rankDir: 'TB',
-            spacingFactor: 1.5
-          } as cytoscape.LayoutOptions;
-          break;
-        case 'circle':
-          layoutOptions = {
-            name: 'circle'
-          };
-          break;
-        case 'grid':
-          layoutOptions = {
-            name: 'grid'
-          };
-          break;
-        default:
-          layoutOptions = {
-            name: 'breadthfirst',
-            directed: true
-          };
-      }
-      
-      const layout = cyRef.current.layout(layoutOptions);
-      layout.run();
     }
   };
 
@@ -268,10 +334,69 @@ const GraphVisualizer = ({
         </div>
       )}
 
+      {/* Layout Controls */}
+      <div className={`mb-4 p-4 rounded-lg border ${
+        isDarkMode 
+          ? 'bg-gray-800 border-gray-700' 
+          : 'bg-white border-gray-200'
+      }`}>
+        <div className="flex flex-col space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className={`text-sm font-semibold ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>
+              Layout Options
+            </h3>
+            <span className={`text-xs px-2 py-1 rounded ${
+              isDarkMode 
+                ? 'bg-blue-900/30 text-blue-300 border border-blue-700' 
+                : 'bg-blue-50 text-blue-700 border border-blue-200'
+            }`}>
+              Current: {AVAILABLE_LAYOUTS[currentLayout].name}
+            </span>
+          </div>
+          
+          {/* Layout Buttons */}
+          <div className="grid grid-cols-3 gap-2">
+            {Object.entries(AVAILABLE_LAYOUTS).map(([key, layout]) => (
+              <button
+                key={key}
+                onClick={() => applyLayout(key as LayoutKey)}
+                disabled={isLayoutRunning}
+                className={`px-3 py-2 text-xs rounded border transition-all duration-200 ${
+                  currentLayout === key
+                    ? isDarkMode
+                      ? 'bg-blue-600 border-blue-500 text-white'
+                      : 'bg-blue-500 border-blue-400 text-white'
+                    : isDarkMode
+                      ? 'border-gray-600 text-gray-300 hover:bg-gray-700 hover:border-gray-500'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                } ${
+                  isLayoutRunning ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
+                }`}
+                title={layout.description}
+              >
+                {layout.name}
+              </button>
+            ))}
+          </div>
+          
+          {/* Current Layout Description */}
+          <p className={`text-xs ${
+            isDarkMode ? 'text-gray-400' : 'text-gray-600'
+          }`}>
+            {AVAILABLE_LAYOUTS[currentLayout].description}
+          </p>
+        </div>
+      </div>
+
       {/* Loading overlay */}
-      {isLoading && (
+      {(isLoading || isLayoutRunning) && (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 z-10 rounded-lg">
-          <div className="text-white">Loading graph...</div>
+          <div className="text-white flex items-center space-x-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+            <span>{isLoading ? 'Loading graph...' : 'Applying layout...'}</span>
+          </div>
         </div>
       )}
 
@@ -284,23 +409,42 @@ const GraphVisualizer = ({
         style={{ width, height }}
       />
 
-      {/* Control buttons (future feature) */}
-      <div className="mt-4 flex space-x-2">
-        <button
-          onClick={resetView}
-          className={`px-3 py-1 text-sm rounded border ${
+      {/* Control buttons */}
+      <div className="mt-4 flex justify-between items-center">
+        <div className="flex space-x-2">
+          <button
+            onClick={resetView}
+            className={`px-3 py-2 text-sm rounded border transition-colors ${
+              isDarkMode 
+                ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
+                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            Reset View
+          </button>
+          
+          <button
+            onClick={() => exportImage('png')}
+            className={`px-3 py-2 text-sm rounded border transition-colors ${
+              isDarkMode 
+                ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
+                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            Export PNG
+          </button>
+        </div>
+
+        {/* Performance Warning for Large Graphs */}
+        {data.nodes.length > 50 && (
+          <div className={`text-xs px-2 py-1 rounded ${
             isDarkMode 
-              ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
-              : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          Reset View
-        </button>
-        {/* TODO: Add more control buttons
-        <button onClick={() => changeLayout('circle')}>Circle Layout</button>
-        <button onClick={() => changeLayout('grid')}>Grid Layout</button>
-        <button onClick={() => exportImage('png')}>Export PNG</button>
-        */}
+              ? 'bg-yellow-900/30 text-yellow-300 border border-yellow-700' 
+              : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+          }`}>
+            ⚡ Large graph - some labels/edges hidden for performance
+          </div>
+        )}
       </div>
     </div>
   );
