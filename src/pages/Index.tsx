@@ -116,21 +116,7 @@ const Index = () => {
         } flex flex-col`}>
           {/* Takes up remaining space (flex-1), flex column for header + content */}
           
-          {/* NEW: Content Header */}
-          <div className={`border-b p-4 ${
-            isDarkMode ? 'border-gray-500' : 'border-gray-200'
-          }`}>
-            <h1 className="text-2xl font-bold">
-              {graphData ? 'Graph Visualization' : 'Visualizer'}
-            </h1>
-            {graphData && (
-              <p className={`text-sm mt-1 ${
-                isDarkMode ? 'text-gray-400' : 'text-gray-600'
-              }`}>
-                Visualizing: {graphData.metadata?.fileName}
-              </p>
-            )}
-          </div>
+
 
           {/* NEW: Main Content Area */}
           <div className="flex-1 p-6">
@@ -139,10 +125,11 @@ const Index = () => {
               <GraphVisualizer 
                 data={graphData}
                 isDarkMode={isDarkMode}
-                height="calc(100vh - 180px)" // Adjust height to fit in available space
+                width="100%"
+                height="calc(100vh - 220px)" // Increased height to account for controls
               />
             ) : (
-              // Show placeholder when no data
+              // Show placeholder when no data - FIXED: Removed extra header
               <div className="h-full flex items-center justify-center">
                 <div className="text-center">
                   {/* PLACEHOLDER CONTENT - Shows when no data is loaded */}
@@ -154,12 +141,13 @@ const Index = () => {
                     <div className="w-12 h-12 border-2 border-dashed border-current rounded"></div>
                   </div>
                   
+                  <h1 className="text-3xl font-bold mb-2">Visualizer</h1>
                   <h2 className="text-xl font-semibold mb-2">No Graph Data</h2>
                   <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     Upload a graph file to visualize your data
                   </p>
                   <p className={`text-sm mt-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                    Supported formats: .txt, .json
+                    Supported formats: .txt * .json (More to be added soon!)
                   </p>
                   {/* PLACEHOLDER TEXT - Tells user what this area is for */}
                 </div>
@@ -234,4 +222,4 @@ const Index = () => {
   );
 };
 
-export default Index;                                               // Make this component available to other files 
+export default Index;                                               // Make this component available to other files

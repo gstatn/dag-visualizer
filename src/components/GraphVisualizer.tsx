@@ -72,21 +72,22 @@ const AVAILABLE_LAYOUTS = {
     description: 'Force-directed layout, good for showing clusters',
     config: {
       name: 'cose',
-      idealEdgeLength: 100,
-      nodeOverlap: 20,
-      refresh: 20,
+      idealEdgeLength: 80,
+      nodeOverlap: 10,
+      refresh: 10,
       fit: true,
-      padding: 30,
+      padding: 20,
       randomize: false,
-      componentSpacing: 100,
-      nodeRepulsion: 400000,
-      edgeElasticity: 100,
-      nestingFactor: 5,
-      gravity: 80,
-      numIter: 1000,
-      initialTemp: 200,
-      coolingFactor: 0.95,
-      minTemp: 1.0
+      componentSpacing: 80,
+      nodeRepulsion: 200000,
+      edgeElasticity: 50,
+      nestingFactor: 1.2,
+      gravity: 40,
+      numIter: 100,        // Reduced from 1000
+      initialTemp: 100,    // Reduced from 200
+      coolingFactor: 0.9,  // Faster cooling
+      minTemp: 1.0,
+      animate: false       // Disable animation for faster completion
     } as cytoscape.LayoutOptions
   }
 } as const;
@@ -323,72 +324,79 @@ const GraphVisualizer = ({
             ? 'bg-gray-800 border-gray-700 text-gray-300' 
             : 'bg-gray-50 border-gray-200 text-gray-700'
         }`}>
-          <div className="flex justify-between items-center text-sm">
-            <span>
-              <strong>{data.metadata.fileName}</strong> ({data.metadata.fileType.toUpperCase()})
-            </span>
-            <span>
-              {data.metadata.nodeCount} nodes, {data.metadata.edgeCount} edges
-            </span>
+          <div className="flex justify-between items-center">
+            <div className="text-sm">
+              <span>
+                <strong>{data.metadata.fileName}</strong> ({data.metadata.fileType.toUpperCase()})
+              </span>
+              <span className="ml-4">
+                {data.metadata.nodeCount} nodes, {data.metadata.edgeCount} edges
+              </span>
+            </div>
+            
+            {/* Control buttons in header */}
+            <div className="flex space-x-2 items-center">
+              <button
+                onClick={resetView}
+                className={`px-3 py-2 text-sm rounded border transition-colors ${
+                  isDarkMode
+                    ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Reset View
+              </button>
+             
+              <button
+                onClick={() => exportImage('png')}
+                className={`px-3 py-2 text-sm rounded border transition-colors ${
+                  isDarkMode
+                    ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Export PNG
+              </button>
+
+              {/* Layout Dropdown */}
+              <div className="relative">
+                <select
+                  value={currentLayout}
+                  onChange={(e) => applyLayout(e.target.value as LayoutKey)}
+                  disabled={isLayoutRunning}
+                  className={`px-3 py-2 text-sm rounded border transition-colors ${
+                    isDarkMode
+                      ? 'border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                  } ${
+                    isLayoutRunning ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
+                  title={AVAILABLE_LAYOUTS[currentLayout].description}
+                >
+                  {Object.entries(AVAILABLE_LAYOUTS).map(([key, layout]) => (
+                    <option
+                      key={key}
+                      value={key}
+                      className={isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-700'}
+                    >
+                      {layout.name}
+                    </option>
+                  ))}
+                </select>
+               
+                {/* Loading indicator overlay for dropdown */}
+                {isLayoutRunning && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20 rounded">
+                    <div className="animate-spin rounded-full h-3 w-3 border border-gray-400 border-t-transparent"></div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Layout Controls */}
-      <div className={`mb-4 p-4 rounded-lg border ${
-        isDarkMode 
-          ? 'bg-gray-800 border-gray-700' 
-          : 'bg-white border-gray-200'
-      }`}>
-        <div className="flex flex-col space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className={`text-sm font-semibold ${
-              isDarkMode ? 'text-white' : 'text-gray-900'
-            }`}>
-              Layout Options
-            </h3>
-            <span className={`text-xs px-2 py-1 rounded ${
-              isDarkMode 
-                ? 'bg-blue-900/30 text-blue-300 border border-blue-700' 
-                : 'bg-blue-50 text-blue-700 border border-blue-200'
-            }`}>
-              Current: {AVAILABLE_LAYOUTS[currentLayout].name}
-            </span>
-          </div>
-          
-          {/* Layout Buttons */}
-          <div className="grid grid-cols-3 gap-2">
-            {Object.entries(AVAILABLE_LAYOUTS).map(([key, layout]) => (
-              <button
-                key={key}
-                onClick={() => applyLayout(key as LayoutKey)}
-                disabled={isLayoutRunning}
-                className={`px-3 py-2 text-xs rounded border transition-all duration-200 ${
-                  currentLayout === key
-                    ? isDarkMode
-                      ? 'bg-blue-600 border-blue-500 text-white'
-                      : 'bg-blue-500 border-blue-400 text-white'
-                    : isDarkMode
-                      ? 'border-gray-600 text-gray-300 hover:bg-gray-700 hover:border-gray-500'
-                      : 'border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
-                } ${
-                  isLayoutRunning ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
-                }`}
-                title={layout.description}
-              >
-                {layout.name}
-              </button>
-            ))}
-          </div>
-          
-          {/* Current Layout Description */}
-          <p className={`text-xs ${
-            isDarkMode ? 'text-gray-400' : 'text-gray-600'
-          }`}>
-            {AVAILABLE_LAYOUTS[currentLayout].description}
-          </p>
-        </div>
-      </div>
+
 
       {/* Loading overlay */}
       {(isLoading || isLayoutRunning) && (
@@ -406,46 +414,14 @@ const GraphVisualizer = ({
         className={`border rounded-lg ${
           isDarkMode ? 'border-gray-700' : 'border-gray-300'
         }`}
-        style={{ width, height }}
+        style={{ 
+          width: width, 
+          height: height || "600px",
+          minHeight: "500px"
+        }}
       />
 
-      {/* Control buttons */}
-      <div className="mt-4 flex justify-between items-center">
-        <div className="flex space-x-2">
-          <button
-            onClick={resetView}
-            className={`px-3 py-2 text-sm rounded border transition-colors ${
-              isDarkMode 
-                ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
-                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            Reset View
-          </button>
-          
-          <button
-            onClick={() => exportImage('png')}
-            className={`px-3 py-2 text-sm rounded border transition-colors ${
-              isDarkMode 
-                ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
-                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            Export PNG
-          </button>
-        </div>
 
-        {/* Performance Warning for Large Graphs */}
-        {data.nodes.length > 50 && (
-          <div className={`text-xs px-2 py-1 rounded ${
-            isDarkMode 
-              ? 'bg-yellow-900/30 text-yellow-300 border border-yellow-700' 
-              : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-          }`}>
-            ⚡ Large graph - some labels/edges hidden for performance
-          </div>
-        )}
-      </div>
     </div>
   );
 };
