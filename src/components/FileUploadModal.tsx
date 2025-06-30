@@ -84,8 +84,6 @@ const FileUploadModal = ({ isOpen, onClose, isDarkMode, onDataUploaded }: FileUp
         return processTxtFile(fileContent, file.name);
       case 'json':
         return processJsonFile(fileContent, file.name);
-      case 'csv':
-        return processCsvFile(fileContent, file.name);
       // TODO: Add support for XML, GraphML, DOT files in the future
       // case 'xml':
       //   return processXmlFile(fileContent, file.name);
@@ -304,63 +302,6 @@ const FileUploadModal = ({ isOpen, onClose, isDarkMode, onDataUploaded }: FileUp
     }
   };
 
-  // NEW: CSV file processor
-  const processCsvFile = (content: string, fileName: string): GraphData => {
-    const lines = content.trim().split('\n');
-    if (lines.length < 2) {
-      throw new Error('CSV file must have at least a header and one data row');
-    }
-
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-    const edges: GraphData['edges'] = [];
-    const nodeSet = new Set<string>();
-
-    // Look for common column names
-    const sourceCol = headers.findIndex(h => ['source', 'from', 'src', 'node1'].includes(h));
-    const targetCol = headers.findIndex(h => ['target', 'to', 'dest', 'node2'].includes(h));
-    const labelCol = headers.findIndex(h => ['label', 'name', 'edge_label'].includes(h));
-
-    if (sourceCol === -1 || targetCol === -1) {
-      throw new Error('CSV must contain source and target columns (source/from/src and target/to/dest)');
-    }
-
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim());
-      if (values.length >= Math.max(sourceCol, targetCol) + 1) {
-        const source = values[sourceCol];
-        const target = values[targetCol];
-        const label = labelCol !== -1 ? values[labelCol] : undefined;
-
-        if (source && target) {
-          nodeSet.add(source);
-          nodeSet.add(target);
-          
-          edges.push({
-            id: `edge-${i-1}`,
-            source,
-            target,
-            label
-          });
-        }
-      }
-    }
-
-    const nodes: GraphData['nodes'] = Array.from(nodeSet).map(nodeId => ({
-      id: nodeId,
-      label: nodeId
-    }));
-
-    return {
-      nodes,
-      edges,
-      metadata: {
-        fileType: 'csv',
-        fileName,
-        nodeCount: nodes.length,
-        edgeCount: edges.length
-      }
-    };
-  };
 
   // UPDATED: Upload handler with file processing
   const handleUpload = async () => {
@@ -405,7 +346,7 @@ const FileUploadModal = ({ isOpen, onClose, isDarkMode, onDataUploaded }: FileUp
           <p className={`${
             isDarkMode ? 'text-gray-400' : 'text-gray-600'
           }`}>
-            Upload your graph data file to visualize your DAG (supports .txt, .json, .csv)
+            Upload your graph data file to visualize your DAG (supports .txt, .json)
           </p>
         </DialogHeader>
         
@@ -441,7 +382,7 @@ const FileUploadModal = ({ isOpen, onClose, isDarkMode, onDataUploaded }: FileUp
               type="file"
               className="hidden"
               onChange={handleFileSelect}
-              accept=".json,.csv,.txt,.xml,.dot,.graphml" // UPDATED: Added future formats
+              accept=".json,.txt,.xml,.dot,.graphml" // UPDATED: Added future formats
             />
             
             <div className="space-y-4">

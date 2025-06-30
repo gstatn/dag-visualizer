@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import cytoscape from 'cytoscape';
 import { GraphData } from './FileUploadModal'; // Import the interface
 
@@ -11,8 +11,16 @@ cytoscape.use(dagreLayout);
 interface GraphVisualizerProps {
   data: GraphData | null;
   isDarkMode: boolean;
+  currentLayout: string;
   width?: string;
   height?: string;
+}
+
+// Expose these methods to parent component
+export interface GraphVisualizerHandle {
+  applyLayout: (layoutKey: string) => void;
+  resetView: () => void;
+  exportImage: (format?: 'png' | 'jpg') => void;
 }
 
 // Layout definitions with their configurations
@@ -83,28 +91,73 @@ const AVAILABLE_LAYOUTS = {
       edgeElasticity: 50,
       nestingFactor: 1.2,
       gravity: 40,
-      numIter: 100,        // Reduced from 1000
-      initialTemp: 100,    // Reduced from 200
-      coolingFactor: 0.9,  // Faster cooling
+      numIter: 100,
+      initialTemp: 100,
+      coolingFactor: 0.9,
       minTemp: 1.0,
-      animate: false       // Disable animation for faster completion
+      animate: false
     } as cytoscape.LayoutOptions
   }
 } as const;
 
-type LayoutKey = keyof typeof AVAILABLE_LAYOUTS;
-
-const GraphVisualizer = ({ 
+const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(({ 
   data, 
   isDarkMode, 
+  currentLayout,
   width = "100%", 
   height = "600px" 
-}: GraphVisualizerProps) => {
+}, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentLayout, setCurrentLayout] = useState<LayoutKey>('dagre');
   const [isLayoutRunning, setIsLayoutRunning] = useState(false);
+
+  // Expose methods to parent component via ref
+  useImperativeHandle(ref, () => ({
+    applyLayout: (layoutKey: string) => {
+      if (!cyRef.current || isLayoutRunning) return;
+      
+      setIsLayoutRunning(true);
+      
+      const layoutConfig = AVAILABLE_LAYOUTS[layoutKey as keyof typeof AVAILABLE_LAYOUTS]?.config;
+      if (!layoutConfig) return;
+      
+      const layout = cyRef.current.layout(layoutConfig);
+      
+      layout.on('layoutstop', () => {
+        setIsLayoutRunning(false);
+        if (cyRef.current) {
+          cyRef.current.fit();
+        }
+      });
+      
+      layout.run();
+    },
+    resetView: () => {
+      if (cyRef.current) {
+        cyRef.current.fit();
+        cyRef.current.center();
+      }
+    },
+    exportImage: (format: 'png' | 'jpg' = 'png') => {
+      if (cyRef.current) {
+        const dataUrl = cyRef.current.png({
+          output: 'blob',
+          bg: isDarkMode ? '#1F2937' : '#FFFFFF',
+          full: true
+        }) as Blob;
+        
+        const url = URL.createObjectURL(dataUrl);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `graph-${currentLayout}.${format}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    }
+  }));
 
   // Initialize or update the graph when data changes
   useEffect(() => {
@@ -126,7 +179,7 @@ const GraphVisualizer = ({
         data: {
           id: node.id,
           label: node.label || node.id,
-          ...node // Include any additional properties
+          ...node
         }
       })),
       // Add edges
@@ -136,7 +189,7 @@ const GraphVisualizer = ({
           source: edge.source,
           target: edge.target,
           label: edge.label,
-          ...edge // Include any additional properties
+          ...edge
         }
       }))
     ];
@@ -197,7 +250,7 @@ const GraphVisualizer = ({
           }
         }
       ],
-      layout: AVAILABLE_LAYOUTS[currentLayout].config,
+      layout: AVAILABLE_LAYOUTS[currentLayout as keyof typeof AVAILABLE_LAYOUTS]?.config || AVAILABLE_LAYOUTS.dagre.config,
       // Interaction options
       userZoomingEnabled: true,
       wheelSensitivity: 5,
@@ -248,138 +301,8 @@ const GraphVisualizer = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Apply layout change
-  const applyLayout = (layoutKey: LayoutKey) => {
-    if (!cyRef.current || isLayoutRunning) return;
-    
-    setIsLayoutRunning(true);
-    setCurrentLayout(layoutKey);
-    
-    const layoutConfig = AVAILABLE_LAYOUTS[layoutKey].config;
-    const layout = cyRef.current.layout(layoutConfig);
-    
-    layout.on('layoutstop', () => {
-      setIsLayoutRunning(false);
-      if (cyRef.current) {
-        cyRef.current.fit();
-      }
-    });
-    
-    layout.run();
-  };
-
-  // Method to export graph as image
-  const exportImage = (format: 'png' | 'jpg' = 'png') => {
-    if (cyRef.current) {
-      const dataUrl = cyRef.current.png({
-        output: 'blob',
-        bg: isDarkMode ? '#1F2937' : '#FFFFFF',
-        full: true
-      }) as Blob;
-      
-      // Create download link
-      const url = URL.createObjectURL(dataUrl);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `graph-${currentLayout}.${format}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }
-  };
-
-  // Method to reset view
-  const resetView = () => {
-    if (cyRef.current) {
-      cyRef.current.fit();
-      cyRef.current.center();
-    }
-  };
-
   return (
     <div className="relative">
-      {/* Graph metadata display */}
-      {data.metadata && (
-        <div className={`mb-4 p-3 rounded-lg border ${
-          isDarkMode 
-            ? 'bg-gray-800 border-gray-700 text-gray-300' 
-            : 'bg-gray-50 border-gray-200 text-gray-700'
-        }`}>
-          <div className="flex justify-between items-center">
-            <div className="text-sm">
-              <span>
-                <strong>{data.metadata.fileName}</strong> ({data.metadata.fileType.toUpperCase()})
-              </span>
-              <span className="ml-4">
-                {data.metadata.nodeCount} nodes, {data.metadata.edgeCount} edges
-              </span>
-            </div>
-            
-            {/* Control buttons in header */}
-            <div className="flex space-x-2 items-center">
-              <button
-                onClick={resetView}
-                className={`px-3 py-2 text-sm rounded border transition-colors ${
-                  isDarkMode
-                    ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
-                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                Reset View
-              </button>
-             
-              <button
-                onClick={() => exportImage('png')}
-                className={`px-3 py-2 text-sm rounded border transition-colors ${
-                  isDarkMode
-                    ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
-                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                Export PNG
-              </button>
-
-              {/* Layout Dropdown */}
-              <div className="relative">
-                <select
-                  value={currentLayout}
-                  onChange={(e) => applyLayout(e.target.value as LayoutKey)}
-                  disabled={isLayoutRunning}
-                  className={`px-3 py-2 text-sm rounded border transition-colors ${
-                    isDarkMode
-                      ? 'border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700'
-                      : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                  } ${
-                    isLayoutRunning ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                  }`}
-                  title={AVAILABLE_LAYOUTS[currentLayout].description}
-                >
-                  {Object.entries(AVAILABLE_LAYOUTS).map(([key, layout]) => (
-                    <option
-                      key={key}
-                      value={key}
-                      className={isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-700'}
-                    >
-                      {layout.name}
-                    </option>
-                  ))}
-                </select>
-               
-                {/* Loading indicator overlay for dropdown */}
-                {isLayoutRunning && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20 rounded">
-                    <div className="animate-spin rounded-full h-3 w-3 border border-gray-400 border-t-transparent"></div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-
       {/* Loading overlay */}
       {(isLoading || isLayoutRunning) && (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 z-10 rounded-lg">
@@ -402,10 +325,10 @@ const GraphVisualizer = ({
           minHeight: "500px"
         }}
       />
-
-
     </div>
   );
-};
+});
+
+GraphVisualizer.displayName = 'GraphVisualizer';
 
 export default GraphVisualizer;
