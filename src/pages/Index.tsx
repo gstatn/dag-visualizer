@@ -6,7 +6,8 @@ import { Switch } from "@/components/ui/switch";                    // Toggle sw
 import { Label } from "@/components/ui/label";                      // Label component
 import FileUploadModal, { GraphData } from "@/components/FileUploadModal";         // Custom file upload modal with GraphData type
 import GraphVisualizer, { GraphVisualizerHandle } from "@/components/GraphVisualizer";         // Graph visualization component
-import { ArrowLeft, Trash2, RotateCcw, Download, Edit3 } from 'lucide-react';                  // Icons
+import { ArrowLeft, Trash2, RotateCcw, Download, Edit3, Wrench, Brush } from 'lucide-react';                  // Icons
+import CustomizationPanel from '@/components/CustomizationPanel';
 
 // Layout definitions (moved from GraphVisualizer)
 const AVAILABLE_LAYOUTS = {
@@ -28,6 +29,7 @@ const Index = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);   // Sidebar collapse state
   const [currentLayout, setCurrentLayout] = useState<LayoutKey>('dagre'); // Current graph layout
   const [showGraphControls, setShowGraphControls] = useState(false); // Toggle for graph controls section
+  const [isCustomizationOpen, setIsCustomizationOpen] = useState(false); // Toggle for customization panel
   
   // Ref to access GraphVisualizer methods
   const graphVisualizerRef = useRef<GraphVisualizerHandle>(null);
@@ -108,7 +110,7 @@ const Index = () => {
             {/* SIDEBAR CONTENT - Only show when not collapsed */}
             {!sidebarCollapsed && (
               <>
-                <h2 className="text-xl font-semibold mb-6 mt-16">Graph Data Tools</h2>
+                <h2 className="text-xl font-semibold mb-6 mt-2">Graph Data Tools</h2>
                 
                 {/* Upload button - always visible */}
                 <Button
@@ -167,6 +169,35 @@ const Index = () => {
 
                     {/* Control buttons */}
                     <div className="space-y-2">
+
+                      {/* Button for manipulation functions of graph ************** To be done */}
+                      <Button
+                        onClick={() => {/* TODO: Add customize functionality */}}
+                        variant="outline"
+                        className={`w-full py-2 transition-all duration-200 ${
+                          isDarkMode 
+                            ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                            : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <Wrench className="w-4 h-4 mr-0" />
+                        Graph Manipulation Functions
+                      </Button>
+
+                      {/* Button for customizing the graphNodes */}
+                      <Button
+                        onClick={() => setIsCustomizationOpen(!isCustomizationOpen)}
+                        variant="outline"
+                        className={`w-full py-2 transition-all duration-200 ${
+                          isDarkMode 
+                            ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                            : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                        } ${isCustomizationOpen ? 'bg-blue-500 text-white border-blue-500' : ''}`}
+                      >
+                        <Brush className="w-4 h-4 mr-0" />
+                        Customize
+                      </Button>
+
                       <Button
                         onClick={handleResetView}
                         variant="outline"
@@ -176,7 +207,7 @@ const Index = () => {
                             : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                         }`}
                       >
-                        <RotateCcw className="w-4 h-4 mr-2" />
+                        <RotateCcw className="w-4 h-4 mr-0" />
                         Reset View
                       </Button>
 
@@ -189,23 +220,10 @@ const Index = () => {
                             : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                         }`}
                       >
-                        <Download className="w-4 h-4 mr-2" />
+                        <Download className="w-4 h-4 mr-0" />
                         Export as PNG
                       </Button>
 
-                      {/* Button for customizing the graphNodes ************** To be done */}
-                      <Button
-                        onClick={() => {/* TODO: Add customize functionality */}}
-                        variant="outline"
-                        className={`w-full py-2 transition-all duration-200 ${
-                          isDarkMode 
-                            ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
-                            : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        <Edit3 className="w-4 h-4 mr-2" />
-                        Customize
-                      </Button>
 
                       <Button
                         onClick={clearGraphData}
@@ -216,7 +234,7 @@ const Index = () => {
                             : 'border-red-500 text-red-600 hover:bg-red-500 hover:text-white'
                         }`}
                       >
-                        <Trash2 className="w-4 h-4 mr-2" />
+                        <Trash2 className="w-4 h-4 mr-0" />
                         Clear Graph
                       </Button>
                     </div>
@@ -242,7 +260,7 @@ const Index = () => {
                 isDarkMode={isDarkMode}
                 currentLayout={currentLayout}
                 width="100%"
-                height="calc(100vh - 130px)"
+                height="calc(100vh - 50px)"
               />
             ) : (
               // Show placeholder when no data
@@ -373,6 +391,16 @@ const Index = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+
+      {/* CUSTOMIZATION PANEL */}
+        <CustomizationPanel 
+          isOpen={isCustomizationOpen}
+          onClose={() => setIsCustomizationOpen(false)}
+          isDarkMode={isDarkMode}
+        />
+
+        {/* FILE UPLOAD MODAL */}
 
       {/* FILE UPLOAD MODAL */}
       <FileUploadModal 

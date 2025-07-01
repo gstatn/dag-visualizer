@@ -81,7 +81,7 @@ const AVAILABLE_LAYOUTS = {
     config: {
       name: 'cose',
       idealEdgeLength: 80,
-      nodeOverlap: 10,
+      nodeOverlap: 10, //  Node repulsion (overlapping) multiplier
       refresh: 10,
       fit: true,
       padding: 20,
@@ -89,11 +89,11 @@ const AVAILABLE_LAYOUTS = {
       componentSpacing: 80,
       nodeRepulsion: 200000,
       edgeElasticity: 50,
-      nestingFactor: 1.2,
+      nestingFactor: 1, // controls clusters the higher the more pull toward center
       gravity: 40,
-      numIter: 100,
-      initialTemp: 100,
-      coolingFactor: 0.9,
+      numIter: 600,
+      initialTemp: 100, // Initial temperature (maximum node displacement)
+      coolingFactor: 0.9,  // Cooling factor (how the temperature is reduced between consecutive iterations
       minTemp: 1.0,
       animate: false
     } as cytoscape.LayoutOptions
