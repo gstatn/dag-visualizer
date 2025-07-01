@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";                    // Toggle sw
 import { Label } from "@/components/ui/label";                      // Label component
 import FileUploadModal, { GraphData } from "@/components/FileUploadModal";         // Custom file upload modal with GraphData type
 import GraphVisualizer, { GraphVisualizerHandle } from "@/components/GraphVisualizer";         // Graph visualization component
-import { ArrowLeft, Trash2 } from 'lucide-react';                  // Icons
+import { ArrowLeft, Trash2, RotateCcw, Download, Edit3 } from 'lucide-react';                  // Icons
 
 // Layout definitions (moved from GraphVisualizer)
 const AVAILABLE_LAYOUTS = {
@@ -27,6 +27,7 @@ const Index = () => {
   const [graphData, setGraphData] = useState<GraphData | null>(null); // Store uploaded graph data
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);   // Sidebar collapse state
   const [currentLayout, setCurrentLayout] = useState<LayoutKey>('dagre'); // Current graph layout
+  const [showGraphControls, setShowGraphControls] = useState(false); // Toggle for graph controls section
   
   // Ref to access GraphVisualizer methods
   const graphVisualizerRef = useRef<GraphVisualizerHandle>(null);
@@ -79,7 +80,7 @@ const Index = () => {
       
       <div className="flex h-screen">
         {/* LEFT SECTION - Sidebar with tools */}
-        <div className={`transition-all duration-300 border-r-[1px] ${
+        <div className={`transition-all duration-300 border-r-[1px] flex-shrink-0 ${
           sidebarCollapsed ? 'w-16' : 'w-80'
         } ${
           isDarkMode ? 'bg-gray-1000 border-gray-500' : 'bg-white border-gray-200'
@@ -175,6 +176,7 @@ const Index = () => {
                             : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                         }`}
                       >
+                        <RotateCcw className="w-4 h-4 mr-2" />
                         Reset View
                       </Button>
 
@@ -187,7 +189,22 @@ const Index = () => {
                             : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                         }`}
                       >
+                        <Download className="w-4 h-4 mr-2" />
                         Export as PNG
+                      </Button>
+
+                      {/* Button for customizing the graphNodes ************** To be done */}
+                      <Button
+                        onClick={() => {/* TODO: Add customize functionality */}}
+                        variant="outline"
+                        className={`w-full py-2 transition-all duration-200 ${
+                          isDarkMode 
+                            ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                            : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <Edit3 className="w-4 h-4 mr-2" />
+                        Customize
                       </Button>
 
                       <Button
@@ -277,7 +294,7 @@ const Index = () => {
               </DialogTitle>
             </DialogHeader>
             
-            <div className="py-4">
+            <div className="py-4 space-y-4">
               <div className="flex items-center space-x-2">
                 <Switch
                   id="dark-mode"
@@ -287,6 +304,70 @@ const Index = () => {
                 <Label htmlFor="dark-mode" className={isDarkMode ? 'text-white' : 'text-gray-900'}>
                   Dark Mode
                 </Label>
+              </div>
+
+              {/* Graph Controls Collapsible Section */}
+              <div className={`border-t pt-4 ${isDarkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+                <button
+                  onClick={() => setShowGraphControls(!showGraphControls)}
+                  className={`flex items-center justify-between w-full text-left font-medium mb-3 transition-colors ${
+                    isDarkMode ? 'text-white hover:text-gray-300' : 'text-gray-900 hover:text-gray-700'
+                  }`}
+                >
+                  <span>Graph Controls</span>
+                  <ArrowLeft 
+                    size={16} 
+                    className={`transition-transform duration-200 ${
+                      showGraphControls ? 'rotate-90' : '-rotate-90'
+                    }`}
+                  />
+                </button>
+                
+                {showGraphControls && (
+                  <div className={`text-sm space-y-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} animate-in slide-in-from-top-2 duration-200`}>
+                    <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                      <strong className={`block mb-2 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                        Mouse Navigation
+                      </strong>
+                      <ul className="space-y-1 text-xs">
+                        <li>• Left click + drag: Pan around the graph</li>
+                        <li>• Mouse wheel: Zoom in/out</li>
+                        <li>• Left click on node/edge: Select single element</li>
+                      </ul>
+                    </div>
+                    
+                    <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                      <strong className={`block mb-2 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                        Advanced Selection
+                      </strong>
+                      <ul className="space-y-1 text-xs">
+                        <li>• Ctrl + left click: Select multiple nodes/edges</li>
+                        <li>• Ctrl + left click + drag: Box select multiple elements</li>
+                        <li>• Click empty space: Deselect all</li>
+                      </ul>
+                    </div>
+
+                    <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                      <strong className={`block mb-2 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                        Layout Controls
+                      </strong>
+                      <ul className="space-y-1 text-xs">
+                        <li>• Use layout dropdown to change graph arrangement</li>
+                        <li>• Reset View button centers and fits graph to screen</li>
+                        <li>• Export PNG saves current view as image</li>
+                      </ul>
+                    </div>
+
+                    {/* Coming Soon Section */}
+                    <div className={`p-3 rounded-lg border-2 border-dashed ${
+                      isDarkMode ? 'border-gray-600 bg-gray-800/50' : 'border-gray-300 bg-gray-50/50'
+                    }`}>
+                      <em className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        🚧 More controls and customization options coming soon...
+                      </em>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </DialogContent>
