@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import cytoscape from 'cytoscape';
-import { GraphData } from './FileUploadModal'; // Import the interface
+// FIXED IMPORT - Use shared types
+import { GraphData, GraphVisualizerHandle } from '@/shared/types/graph';
+import { AVAILABLE_LAYOUTS } from '@/shared/constants/layouts';
 
 // Import dagre layout using ES6 imports
 import dagreLayout from 'cytoscape-dagre';
@@ -15,90 +17,6 @@ interface GraphVisualizerProps {
   width?: string;
   height?: string;
 }
-
-// Expose these methods to parent component
-export interface GraphVisualizerHandle {
-  applyLayout: (layoutKey: string) => void;
-  resetView: () => void;
-  exportImage: (format?: 'png' | 'jpg') => void;
-}
-
-// Layout definitions with their configurations
-const AVAILABLE_LAYOUTS = {
-  dagre: {
-    name: 'Dagre',
-    description: 'Hierarchical layout ideal for DAGs and trees',
-    config: {
-      name: 'dagre',
-      rankDir: 'TB',
-      spacingFactor: 1.5,
-      nodeDimensionsIncludeLabels: true
-    } as cytoscape.LayoutOptions
-  },
-  circle: {
-    name: 'Circle',
-    description: 'Arranges nodes in a circle, good for showing connections',
-    config: {
-      name: 'circle',
-      radius: Math.min(300, window.innerWidth / 6),
-      startAngle: -Math.PI / 2
-    } as cytoscape.LayoutOptions
-  },
-  concentric: {
-    name: 'Concentric',
-    description: 'Concentric circles based on node importance',
-    config: {
-      name: 'concentric',
-      concentric: (node: cytoscape.NodeSingular) => node.degree(false),
-      levelWidth: () => 1,
-      spacingFactor: 1.5,
-      minNodeSpacing: 50
-    } as cytoscape.LayoutOptions
-  },
-  grid: {
-    name: 'Grid',
-    description: 'Organized grid layout, clean and systematic',
-    config: {
-      name: 'grid',
-      rows: undefined,
-      cols: undefined,
-      spacingFactor: 1.2
-    } as cytoscape.LayoutOptions
-  },
-  breadthfirst: {
-    name: 'Breadthfirst',
-    description: 'Tree-like layout using breadth-first traversal',
-    config: {
-      name: 'breadthfirst',
-      directed: true,
-      spacingFactor: 1.5,
-      avoidOverlap: true
-    } as cytoscape.LayoutOptions
-  },
-  cose: {
-    name: 'CoSE',
-    description: 'Force-directed layout, good for showing clusters',
-    config: {
-      name: 'cose',
-      idealEdgeLength: 80,
-      nodeOverlap: 10, //  Node repulsion (overlapping) multiplier
-      refresh: 10,
-      fit: true,
-      padding: 20,
-      randomize: false,
-      componentSpacing: 80,
-      nodeRepulsion: 200000,
-      edgeElasticity: 50,
-      nestingFactor: 1, // controls clusters the higher the more pull toward center
-      gravity: 40,
-      numIter: 600,
-      initialTemp: 100, // Initial temperature (maximum node displacement)
-      coolingFactor: 0.9,  // Cooling factor (how the temperature is reduced between consecutive iterations
-      minTemp: 1.0,
-      animate: false
-    } as cytoscape.LayoutOptions
-  }
-} as const;
 
 const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(({ 
   data, 

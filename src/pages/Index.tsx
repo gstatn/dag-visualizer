@@ -1,35 +1,26 @@
-import { useState, useRef } from "react";                                    // React hook for state management
-import { Settings } from "lucide-react";                            // Settings icon
-import { Button } from "@/components/ui/button";                    // Reusable button component
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"; // Modal components
-import { Switch } from "@/components/ui/switch";                    // Toggle switch component
-import { Label } from "@/components/ui/label";                      // Label component
-import FileUploadModal, { GraphData } from "@/components/FileUploadModal";         // Custom file upload modal with GraphData type
-import GraphVisualizer, { GraphVisualizerHandle } from "@/components/GraphVisualizer";         // Graph visualization component
-import { ArrowLeft, Trash2, RotateCcw, Download, Edit3, Wrench, Brush } from 'lucide-react';                  // Icons
-import CustomizationPanel from '@/components/CustomizationPanel';
-
-// Layout definitions (moved from GraphVisualizer)
-const AVAILABLE_LAYOUTS = {
-  dagre: { name: 'Dagre', description: 'Hierarchical layout ideal for DAGs and trees' },
-  circle: { name: 'Circle', description: 'Arranges nodes in a circle, good for showing connections' },
-  concentric: { name: 'Concentric', description: 'Concentric circles based on node importance' },
-  grid: { name: 'Grid', description: 'Organized grid layout, clean and systematic' },
-  breadthfirst: { name: 'Breadthfirst', description: 'Tree-like layout using breadth-first traversal' },
-  cose: { name: 'CoSE', description: 'Force-directed layout, good for showing clusters' }
-} as const;
-
-type LayoutKey = keyof typeof AVAILABLE_LAYOUTS;
+import { useState, useRef } from "react";
+import { Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+// FIXED IMPORTS - Updated to new folder structure
+import FileUploadModal from "@/components/modals/FileUploadModal";
+import GraphVisualizer from "@/components/graph/GraphVisualizer";
+import { GraphData, GraphVisualizerHandle } from "@/shared/types/graph";
+import { AVAILABLE_LAYOUTS, LayoutKey } from "@/shared/constants/layouts";
+import { ArrowLeft, Trash2, RotateCcw, Download, Wrench, Brush } from 'lucide-react';
+import CustomizationPanel from '@/components/panels/CustomizationPanel';
 
 const Index = () => {
   // STATE MANAGEMENT - Things that can change and cause re-renders
-  const [isDarkMode, setIsDarkMode] = useState(true);               // Dark mode on/off (starts as dark)
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false); // File upload modal open/closed
-  const [graphData, setGraphData] = useState<GraphData | null>(null); // Store uploaded graph data
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);   // Sidebar collapse state
-  const [currentLayout, setCurrentLayout] = useState<LayoutKey>('dagre'); // Current graph layout
-  const [showGraphControls, setShowGraphControls] = useState(false); // Toggle for graph controls section
-  const [isCustomizationOpen, setIsCustomizationOpen] = useState(false); // Toggle for customization panel
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [graphData, setGraphData] = useState<GraphData | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [currentLayout, setCurrentLayout] = useState<LayoutKey>('dagre');
+  const [showGraphControls, setShowGraphControls] = useState(false);
+  const [isCustomizationOpen, setIsCustomizationOpen] = useState(false);
   
   // Ref to access GraphVisualizer methods
   const graphVisualizerRef = useRef<GraphVisualizerHandle>(null);
@@ -69,16 +60,15 @@ const Index = () => {
 
   // DARK MODE EFFECT - Apply dark mode to entire document
   if (isDarkMode) {
-    document.documentElement.classList.add('dark');                 // Add 'dark' class to <html> element
+    document.documentElement.classList.add('dark');
   } else {
-    document.documentElement.classList.remove('dark');             // Remove 'dark' class from <html> element
+    document.documentElement.classList.remove('dark');
   }
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
       isDarkMode ? 'bg-[rgb(32,32,32)] text-white' : 'bg-gray-50 text-gray-900'
     }`}>
-      {/* MAIN LAYOUT - Full screen container with smooth color transitions */}
       
       <div className="flex h-screen">
         {/* LEFT SECTION - Sidebar with tools */}
@@ -170,7 +160,7 @@ const Index = () => {
                     {/* Control buttons */}
                     <div className="space-y-2">
 
-                      {/* Button for manipulation functions of graph ************** To be done */}
+                      {/* Button for manipulation functions of graph */}
                       <Button
                         onClick={() => {/* TODO: Add customize functionality */}}
                         variant="outline"
@@ -223,7 +213,6 @@ const Index = () => {
                         <Download className="w-4 h-4 mr-0" />
                         Export as PNG
                       </Button>
-
 
                       <Button
                         onClick={clearGraphData}
@@ -392,15 +381,12 @@ const Index = () => {
         </Dialog>
       </div>
 
-
       {/* CUSTOMIZATION PANEL */}
         <CustomizationPanel 
           isOpen={isCustomizationOpen}
           onClose={() => setIsCustomizationOpen(false)}
           isDarkMode={isDarkMode}
         />
-
-        {/* FILE UPLOAD MODAL */}
 
       {/* FILE UPLOAD MODAL */}
       <FileUploadModal 
