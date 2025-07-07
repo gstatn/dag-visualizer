@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Square, Diamond, Circle, Bold, Italic } from 'lucide-react';
 
 interface CustomizationPanelProps {
   isOpen: boolean;
@@ -14,6 +14,10 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'Style' | 'Text'>('Style');
   const [currentColorPage, setCurrentColorPage] = useState(0);
+  const [selectedShape, setSelectedShape] = useState<'square' | 'diamond' | 'ellipse'>('square');
+  const [isBold, setIsBold] = useState(false);
+  const [isItalic, setIsItalic] = useState(false);
+  const [selectedFont, setSelectedFont] = useState('Arial');
 
   // Color swatches data (mimicking the draw.io interface)
   const colorPages = [
@@ -31,7 +35,20 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     ]
   ];
 
+  const fonts = ['Arial', 'Helvetica', 'Times New Roman', 'Georgia', 'Verdana', 'Roboto', 'Open Sans'];
+
   const tabs = ['Style', 'Text'] as const;
+
+  const ShapeIcon = ({ shape }: { shape: 'square' | 'diamond' | 'ellipse' }) => {
+    switch (shape) {
+      case 'square':
+        return <Square size={16} />;
+      case 'diamond':
+        return <Diamond size={16} />;
+      case 'ellipse':
+        return <Circle size={16} />;
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -84,6 +101,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
           <div className="space-y-6">
             {/* Color palette section */}
             <div>
+              <h3 className="text-sm font-medium mb-3">Color</h3>
               <div className="flex items-center justify-between mb-3">
                 <button
                   onClick={() => setCurrentColorPage(Math.max(0, currentColorPage - 1))}
@@ -142,121 +160,64 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
               </div>
             </div>
 
-            {/* Fill options */}
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  id="fill"
-                  defaultChecked
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="fill" className="text-sm font-medium">Fill</label>
-                <select className={`ml-auto px-2 py-1 text-xs rounded border ${
-                  isDarkMode 
-                    ? 'bg-gray-800 border-gray-600 text-gray-300' 
-                    : 'bg-white border-gray-300 text-gray-700'
-                }`}>
-                  <option>Auto</option>
-                  <option>Solid</option>
-                  <option>Gradient</option>
-                </select>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  id="gradient"
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="gradient" className="text-sm">Gradient</label>
+            {/* Node Shape section */}
+            <div>
+              <h3 className="text-sm font-medium mb-3">Shape</h3>
+              <div className="grid grid-cols-3 gap-2">
+                {(['square', 'diamond', 'ellipse'] as const).map((shape) => (
+                  <button
+                    key={shape}
+                    onClick={() => setSelectedShape(shape)}
+                    className={`p-3 rounded border-2 transition-colors flex items-center justify-center ${
+                      selectedShape === shape
+                        ? isDarkMode
+                          ? 'border-blue-400 bg-blue-900/20 text-blue-400'
+                          : 'border-blue-500 bg-blue-50 text-blue-600'
+                        : isDarkMode
+                          ? 'border-gray-600 hover:border-gray-500 text-gray-400'
+                          : 'border-gray-300 hover:border-gray-400 text-gray-600'
+                    }`}
+                  >
+                    <ShapeIcon shape={shape} />
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Line options */}
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  id="line"
-                  defaultChecked
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="line" className="text-sm font-medium">Line</label>
-                <div className={`ml-auto w-6 h-4 border-2 ${
-                  isDarkMode ? 'border-white' : 'border-black'
-                }`}></div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-gray-500 block mb-1">Width</label>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="number"
-                      defaultValue="1"
-                      className={`w-12 px-1 py-1 text-xs border rounded ${
-                        isDarkMode 
-                          ? 'bg-gray-800 border-gray-600 text-gray-300' 
-                          : 'bg-white border-gray-300 text-gray-700'
-                      }`}
-                    />
-                    <span className="text-xs">pt</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs text-gray-500 block mb-1">Perimeter</label>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="number"
-                      defaultValue="0"
-                      className={`w-12 px-1 py-1 text-xs border rounded ${
-                        isDarkMode 
-                          ? 'bg-gray-800 border-gray-600 text-gray-300' 
-                          : 'bg-white border-gray-300 text-gray-700'
-                      }`}
-                    />
-                    <span className="text-xs">pt</span>
-                  </div>
-                </div>
-              </div>
-
+            {/* Width and Opacity section */}
+            <div className="space-y-4">
               <div>
-                <label className="text-xs text-gray-500 block mb-1">Opacity</label>
+                <label className="text-sm font-medium block mb-2">Border Width</label>
                 <div className="flex items-center space-x-2">
                   <input
                     type="number"
-                    defaultValue="100"
-                    className={`w-16 px-1 py-1 text-xs border rounded ${
+                    defaultValue="1"
+                    className={`w-16 px-2 py-1 text-sm border rounded ${
                       isDarkMode 
                         ? 'bg-gray-800 border-gray-600 text-gray-300' 
                         : 'bg-white border-gray-300 text-gray-700'
                     }`}
                   />
-                  <span className="text-xs">%</span>
+                  <span className="text-sm">pt</span>
                 </div>
               </div>
-            </div>
 
-            {/* Additional options */}
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  id="sketch"
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="sketch" className="text-sm">Sketch</label>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  id="shadow"
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="shadow" className="text-sm">Shadow</label>
+              <div>
+                <label className="text-sm font-medium block mb-2">Opacity</label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="number"
+                    defaultValue="100"
+                    min="0"
+                    max="100"
+                    className={`w-16 px-2 py-1 text-sm border rounded ${
+                      isDarkMode 
+                        ? 'bg-gray-800 border-gray-600 text-gray-300' 
+                        : 'bg-white border-gray-300 text-gray-700'
+                    }`}
+                  />
+                  <span className="text-sm">%</span>
+                </div>
               </div>
             </div>
 
@@ -281,12 +242,140 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
         )}
 
         {activeTab === 'Text' && (
-          <div className="space-y-4">
-            <div className={`p-4 rounded-lg ${
-              isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
+          <div className="space-y-6">
+            {/* Node Name */}
+            <div>
+              <label className="text-sm font-medium block mb-2">Node Name</label>
+              <input
+                type="text"
+                placeholder="Enter node name..."
+                className={`w-full px-3 py-2 text-sm border rounded ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-600 text-gray-300 placeholder-gray-500' 
+                    : 'bg-white border-gray-300 text-gray-700 placeholder-gray-400'
+                }`}
+              />
+            </div>
+
+            {/* Font Family */}
+            <div>
+              <label className="text-sm font-medium block mb-2">Font</label>
+              <select 
+                value={selectedFont}
+                onChange={(e) => setSelectedFont(e.target.value)}
+                className={`w-full px-3 py-2 text-sm border rounded ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-600 text-gray-300' 
+                    : 'bg-white border-gray-300 text-gray-700'
+                }`}
+              >
+                {fonts.map((font) => (
+                  <option key={font} value={font}>{font}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Font Style Controls */}
+            <div>
+              <label className="text-sm font-medium block mb-3">Style</label>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setIsBold(!isBold)}
+                  className={`p-2 rounded border transition-colors ${
+                    isBold
+                      ? isDarkMode
+                        ? 'border-blue-400 bg-blue-900/20 text-blue-400'
+                        : 'border-blue-500 bg-blue-50 text-blue-600'
+                      : isDarkMode
+                        ? 'border-gray-600 hover:border-gray-500 text-gray-400'
+                        : 'border-gray-300 hover:border-gray-400 text-gray-600'
+                  }`}
+                >
+                  <Bold size={16} />
+                </button>
+                <button
+                  onClick={() => setIsItalic(!isItalic)}
+                  className={`p-2 rounded border transition-colors ${
+                    isItalic
+                      ? isDarkMode
+                        ? 'border-blue-400 bg-blue-900/20 text-blue-400'
+                        : 'border-blue-500 bg-blue-50 text-blue-600'
+                      : isDarkMode
+                        ? 'border-gray-600 hover:border-gray-500 text-gray-400'
+                        : 'border-gray-300 hover:border-gray-400 text-gray-600'
+                  }`}
+                >
+                  <Italic size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Font Color */}
+            <div>
+              <h3 className="text-sm font-medium mb-3">Text Color</h3>
+              <div className="flex items-center justify-between mb-3">
+                <button
+                  onClick={() => setCurrentColorPage(Math.max(0, currentColorPage - 1))}
+                  disabled={currentColorPage === 0}
+                  className={`p-1 rounded ${
+                    currentColorPage === 0
+                      ? 'opacity-30 cursor-not-allowed'
+                      : isDarkMode
+                        ? 'hover:bg-gray-700 text-gray-400'
+                        : 'hover:bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                {/* Color swatches grid */}
+                <div className="grid grid-cols-4 gap-2 mx-4">
+                  {colorPages[currentColorPage].map((color, index) => (
+                    <div
+                      key={index}
+                      className="w-8 h-8 rounded cursor-pointer border border-gray-400 hover:scale-110 transition-transform"
+                      style={{ backgroundColor: color }}
+                      title={color}
+                    />
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setCurrentColorPage(Math.min(colorPages.length - 1, currentColorPage + 1))}
+                  disabled={currentColorPage === colorPages.length - 1}
+                  className={`p-1 rounded ${
+                    currentColorPage === colorPages.length - 1
+                      ? 'opacity-30 cursor-not-allowed'
+                      : isDarkMode
+                        ? 'hover:bg-gray-700 text-gray-400'
+                        : 'hover:bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+              {/* Color page indicators */}
+              <div className="flex justify-center space-x-1">
+                {colorPages.map((_, index) => (
+                  <div
+                    key={index}
+                    className={`w-2 h-2 rounded-full cursor-pointer transition-colors ${
+                      index === currentColorPage
+                        ? isDarkMode ? 'bg-blue-400' : 'bg-blue-500'
+                        : isDarkMode ? 'bg-gray-600' : 'bg-gray-300'
+                    }`}
+                    onClick={() => setCurrentColorPage(index)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Selection Status */}
+            <div className={`p-3 rounded-lg text-center ${
+              isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'
             }`}>
-              <h3 className="font-medium mb-2">Text Properties</h3>
-              <p className="text-sm text-gray-500">Text customization options will be available here.</p>
+              <p className="text-sm">Select nodes to edit text properties</p>
             </div>
           </div>
         )}
