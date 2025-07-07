@@ -67,6 +67,13 @@ const Index = () => {
     }
   };
 
+  // Handle color change for selected nodes
+  const handleColorChange = (color: string) => {
+    if (graphVisualizerRef.current) {
+      graphVisualizerRef.current.changeSelectedNodesColor(color);
+    }
+  };
+
   // DARK MODE EFFECT - Apply dark mode to entire document
   if (isDarkMode) {
     document.documentElement.classList.add('dark');                 // Add 'dark' class to <html> element
@@ -398,6 +405,7 @@ const Index = () => {
           isOpen={isCustomizationOpen}
           onClose={() => setIsCustomizationOpen(false)}
           isDarkMode={isDarkMode}
+          onColorChange={handleColorChange}
         />
 
         {/* FILE UPLOAD MODAL */}

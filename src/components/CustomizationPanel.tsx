@@ -5,12 +5,14 @@ interface CustomizationPanelProps {
   isOpen: boolean;
   onClose: () => void;
   isDarkMode: boolean;
+  onColorChange?: (color: string) => void;
 }
 
 const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
   isOpen,
   onClose,
-  isDarkMode
+  isDarkMode,
+  onColorChange
 }) => {
   const [activeTab, setActiveTab] = useState<'Style' | 'Text'>('Style');
   const [currentColorPage, setCurrentColorPage] = useState(0);
@@ -47,6 +49,14 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
         return <Diamond size={16} />;
       case 'ellipse':
         return <Circle size={16} />;
+    }
+  };
+
+  // Fixed: This function now properly calls the onColorChange callback
+  const handleColorClick = (color: string) => {
+    console.log('Color clicked:', color);
+    if (onColorChange) {
+      onColorChange(color);
     }
   };
 
@@ -101,7 +111,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
           <div className="space-y-6">
             {/* Color palette section */}
             <div>
-              <h3 className="text-sm font-medium mb-3">Color</h3>
+              <h3 className="text-sm font-medium mb-3">Node Color</h3>
               <div className="flex items-center justify-between mb-3">
                 <button
                   onClick={() => setCurrentColorPage(Math.max(0, currentColorPage - 1))}
@@ -122,10 +132,14 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                   {colorPages[currentColorPage].map((color, index) => (
                     <div
                       key={index}
-                      className="w-8 h-8 rounded cursor-pointer border border-gray-400 hover:scale-110 transition-transform"
+                      className="w-8 h-8 rounded cursor-pointer border border-gray-400 hover:scale-110 transition-transform relative group"
                       style={{ backgroundColor: color }}
-                      title={color}
-                    />
+                      title={`Apply color ${color} to selected nodes`}
+                      onClick={() => handleColorClick(color)}
+                    >
+                      {/* Hover effect overlay */}
+                      <div className="absolute inset-0 bg-white bg-opacity-20 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                    </div>
                   ))}
                 </div>
 
@@ -157,6 +171,13 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                     onClick={() => setCurrentColorPage(index)}
                   />
                 ))}
+              </div>
+
+              {/* Instructions */}
+              <div className={`p-3 rounded-lg text-center text-sm ${
+                isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'
+              }`}>
+                <p>Select nodes on the graph, then click a color to apply</p>
               </div>
             </div>
 
@@ -333,10 +354,14 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                   {colorPages[currentColorPage].map((color, index) => (
                     <div
                       key={index}
-                      className="w-8 h-8 rounded cursor-pointer border border-gray-400 hover:scale-110 transition-transform"
+                      className="w-8 h-8 rounded cursor-pointer border border-gray-400 hover:scale-110 transition-transform relative group"
                       style={{ backgroundColor: color }}
-                      title={color}
-                    />
+                      title={`Apply text color ${color} to selected nodes`}
+                      onClick={() => handleColorClick(color)}
+                    >
+                      {/* Hover effect overlay */}
+                      <div className="absolute inset-0 bg-white bg-opacity-20 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                    </div>
                   ))}
                 </div>
 

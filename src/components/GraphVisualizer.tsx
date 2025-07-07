@@ -21,6 +21,7 @@ export interface GraphVisualizerHandle {
   applyLayout: (layoutKey: string) => void;
   resetView: () => void;
   exportImage: (format?: 'png' | 'jpg') => void;
+  changeSelectedNodesColor: (color: string) => void;
 }
 
 // Layout definitions with their configurations
@@ -156,6 +157,18 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       }
+    },
+    changeSelectedNodesColor: (color: string) => {
+      if (cyRef.current) {
+        const selectedNodes = cyRef.current.$(':selected').nodes();
+        if (selectedNodes.length > 0) {
+          selectedNodes.style('background-color', color);
+          selectedNodes.style('border-color', color);
+          console.log(`Changed color of ${selectedNodes.length} selected nodes to ${color}`);
+        } else {
+          console.log('No nodes selected for color change');
+        }
+      }
     }
   }));
 
@@ -221,7 +234,8 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
           selector: 'node:selected',
           style: {
             'background-color': isDarkMode ? '#EF4444' : '#DC2626',
-            'border-color': isDarkMode ? '#B91C1C' : '#991B1B'
+            'border-color': isDarkMode ? '#B91C1C' : '#991B1B',
+            'border-width': '3px'
           }
         },
         {
