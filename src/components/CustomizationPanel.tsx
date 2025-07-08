@@ -84,7 +84,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     }
   };
 
-  // Handle border changes
+  // Handle border changes - FIXED VERSION
   const handleBorderChange = (borderColor?: string, width?: number) => {
     const finalBorderColor = borderColor || customBorderColor;
     const finalWidth = width !== undefined ? width : borderWidth;
@@ -102,6 +102,24 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     } else {
       console.log('onBorderChange prop is not available');
     }
+  };
+
+  // Handle border color input change - FIXED to prevent losing focus
+  const handleBorderColorInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newColor = e.target.value;
+    setCustomBorderColor(newColor);
+  };
+
+  // Handle border width input change - FIXED to prevent losing focus
+  const handleBorderWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newWidth = parseInt(e.target.value) || 1;
+    setBorderWidth(newWidth);
+  };
+
+  // Handle custom node color input change - FIXED to prevent losing focus
+  const handleCustomNodeColorInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newColor = e.target.value;
+    setCustomNodeColor(newColor);
   };
 
   // Dropdown component
@@ -253,16 +271,16 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                       type="color"
                       value={customNodeColor}
                       onChange={(e) => setCustomNodeColor(e.target.value)}
-                      className="w-16 h-10 rounded border border-gray-400 cursor-pointer"
+                      className="w-10 h-10 rounded border border-gray-400 cursor-pointer"
                     />
                     <input
                       type="text"
                       value={customNodeColor}
-                      onChange={(e) => setCustomNodeColor(e.target.value)}
+                      onChange={handleCustomNodeColorInputChange}
                       placeholder="#FF0000"
-                      className={`flex-1 px-2 py-2 text-sm border rounded ${
-                        isDarkMode 
-                          ? 'bg-gray-800 border-gray-600 text-gray-300' 
+                      className={`flex-1 min-w-0 px-2 py-2 text-sm border rounded ${
+                        isDarkMode
+                          ? 'bg-gray-800 border-gray-600 text-gray-300'
                           : 'bg-white border-gray-300 text-gray-700'
                       }`}
                     />
@@ -301,7 +319,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                     <input
                       type="text"
                       value={customBorderColor}
-                      onChange={(e) => setCustomBorderColor(e.target.value)}
+                      onChange={handleBorderColorInputChange}
                       placeholder="#000000"
                       className={`flex-1 px-2 py-2 text-sm border rounded ${
                         isDarkMode 
@@ -319,7 +337,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                     <input
                       type="number"
                       value={borderWidth}
-                      onChange={(e) => setBorderWidth(parseInt(e.target.value) || 1)}
+                      onChange={handleBorderWidthChange}
                       min="0"
                       max="20"
                       className={`w-20 px-2 py-2 text-sm border rounded ${

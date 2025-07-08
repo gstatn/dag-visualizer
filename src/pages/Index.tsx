@@ -1,12 +1,12 @@
-import { useState, useRef } from "react";                                    // React hook for state management
-import { Settings } from "lucide-react";                            // Settings icon
-import { Button } from "@/components/ui/button";                    // Reusable button component
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"; // Modal components
-import { Switch } from "@/components/ui/switch";                    // Toggle switch component
-import { Label } from "@/components/ui/label";                      // Label component
-import FileUploadModal, { GraphData } from "@/components/FileUploadModal";         // Custom file upload modal with GraphData type
-import GraphVisualizer, { GraphVisualizerHandle } from "@/components/GraphVisualizer";         // Graph visualization component
-import { ArrowLeft, Trash2, RotateCcw, Download, Edit3, Wrench, Brush } from 'lucide-react';                  // Icons
+import { useState, useRef } from "react";
+import { Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import FileUploadModal, { GraphData } from "@/components/FileUploadModal";
+import GraphVisualizer, { GraphVisualizerHandle } from "@/components/GraphVisualizer";
+import { ArrowLeft, Trash2, RotateCcw, Download, Edit3, Wrench, Brush } from 'lucide-react';
 import CustomizationPanel from '@/components/CustomizationPanel';
 
 // Layout definitions (moved from GraphVisualizer)
@@ -22,30 +22,26 @@ const AVAILABLE_LAYOUTS = {
 type LayoutKey = keyof typeof AVAILABLE_LAYOUTS;
 
 const Index = () => {
-  // STATE MANAGEMENT - Things that can change and cause re-renders
-  const [isDarkMode, setIsDarkMode] = useState(true);               // Dark mode on/off (starts as dark)
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false); // File upload modal open/closed
-  const [graphData, setGraphData] = useState<GraphData | null>(null); // Store uploaded graph data
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);   // Sidebar collapse state
-  const [currentLayout, setCurrentLayout] = useState<LayoutKey>('dagre'); // Current graph layout
-  const [showGraphControls, setShowGraphControls] = useState(false); // Toggle for graph controls section
-  const [isCustomizationOpen, setIsCustomizationOpen] = useState(false); // Toggle for customization panel
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [graphData, setGraphData] = useState<GraphData | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [currentLayout, setCurrentLayout] = useState<LayoutKey>('dagre');
+  const [showGraphControls, setShowGraphControls] = useState(false);
+  const [isCustomizationOpen, setIsCustomizationOpen] = useState(false);
   
   // Ref to access GraphVisualizer methods
   const graphVisualizerRef = useRef<GraphVisualizerHandle>(null);
 
-  // Handle when user uploads data
   const handleDataUploaded = (data: GraphData) => {
     console.log("Index.tsx received graph data:", data);
     setGraphData(data);
   };
 
-  // Clear current graph data
   const clearGraphData = () => {
     setGraphData(null);
   };
 
-  // Handle layout change
   const handleLayoutChange = (layoutKey: LayoutKey) => {
     setCurrentLayout(layoutKey);
     if (graphVisualizerRef.current) {
@@ -53,39 +49,41 @@ const Index = () => {
     }
   };
 
-  // Handle reset view
   const handleResetView = () => {
     if (graphVisualizerRef.current) {
       graphVisualizerRef.current.resetView();
     }
   };
 
-  // Handle export image
   const handleExportImage = () => {
     if (graphVisualizerRef.current) {
       graphVisualizerRef.current.exportImage('png');
     }
   };
 
-  // Handle color change for selected nodes
   const handleColorChange = (color: string) => {
     if (graphVisualizerRef.current) {
       graphVisualizerRef.current.changeSelectedNodesColor(color);
     }
   };
 
-  // DARK MODE EFFECT - Apply dark mode to entire document
+  // NEW: Handle border change for selected nodes
+  const handleBorderChange = (borderColor: string, borderWidth: number) => {
+    if (graphVisualizerRef.current) {
+      graphVisualizerRef.current.changeSelectedNodesBorder(borderColor, borderWidth);
+    }
+  };
+
   if (isDarkMode) {
-    document.documentElement.classList.add('dark');                 // Add 'dark' class to <html> element
+    document.documentElement.classList.add('dark');
   } else {
-    document.documentElement.classList.remove('dark');             // Remove 'dark' class from <html> element
+    document.documentElement.classList.remove('dark');
   }
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
       isDarkMode ? 'bg-[rgb(32,32,32)] text-white' : 'bg-gray-50 text-gray-900'
     }`}>
-      {/* MAIN LAYOUT - Full screen container with smooth color transitions */}
       
       <div className="flex h-screen">
         {/* LEFT SECTION - Sidebar with tools */}
@@ -119,7 +117,6 @@ const Index = () => {
               <>
                 <h2 className="text-xl font-semibold mb-6 mt-2">Graph Data Tools</h2>
                 
-                {/* Upload button - always visible */}
                 <Button
                   onClick={() => setIsUploadModalOpen(true)}
                   className={`w-full py-6 text-lg transition-all duration-200 hover:scale-105 ${
@@ -131,7 +128,6 @@ const Index = () => {
                   Upload Graph Data
                 </Button>
 
-                {/* Graph metadata and controls - only show when data is loaded */}
                 {graphData && (
                   <div className="w-full mt-6 space-y-4">
                     {/* Graph metadata */}
@@ -177,7 +173,6 @@ const Index = () => {
                     {/* Control buttons */}
                     <div className="space-y-2">
 
-                      {/* Button for manipulation functions of graph ************** To be done */}
                       <Button
                         onClick={() => {/* TODO: Add customize functionality */}}
                         variant="outline"
@@ -191,7 +186,6 @@ const Index = () => {
                         Graph Manipulation Functions
                       </Button>
 
-                      {/* Button for customizing the graphNodes */}
                       <Button
                         onClick={() => setIsCustomizationOpen(!isCustomizationOpen)}
                         variant="outline"
@@ -231,7 +225,6 @@ const Index = () => {
                         Export as PNG
                       </Button>
 
-
                       <Button
                         onClick={clearGraphData}
                         variant="outline"
@@ -260,7 +253,6 @@ const Index = () => {
           {/* Main Content Area */}
           <div className="flex-1 p-6">
             {graphData ? (
-              // Show graph when data is available
               <GraphVisualizer 
                 ref={graphVisualizerRef}
                 data={graphData}
@@ -270,7 +262,6 @@ const Index = () => {
                 height="calc(100vh - 50px)"
               />
             ) : (
-              // Show placeholder when no data
               <div className="h-full flex items-center justify-center">
                 <div className="text-center">
                   <div className={`w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center ${
@@ -383,7 +374,6 @@ const Index = () => {
                       </ul>
                     </div>
 
-                    {/* Coming Soon Section */}
                     <div className={`p-3 rounded-lg border-2 border-dashed ${
                       isDarkMode ? 'border-gray-600 bg-gray-800/50' : 'border-gray-300 bg-gray-50/50'
                     }`}>
@@ -399,16 +389,14 @@ const Index = () => {
         </Dialog>
       </div>
 
-
-      {/* CUSTOMIZATION PANEL */}
-        <CustomizationPanel 
-          isOpen={isCustomizationOpen}
-          onClose={() => setIsCustomizationOpen(false)}
-          isDarkMode={isDarkMode}
-          onColorChange={handleColorChange}
-        />
-
-        {/* FILE UPLOAD MODAL */}
+      {/* CUSTOMIZATION PANEL - Now with border change support */}
+      <CustomizationPanel 
+        isOpen={isCustomizationOpen}
+        onClose={() => setIsCustomizationOpen(false)}
+        isDarkMode={isDarkMode}
+        onColorChange={handleColorChange}
+        onBorderChange={handleBorderChange}
+      />
 
       {/* FILE UPLOAD MODAL */}
       <FileUploadModal 
