@@ -16,12 +16,13 @@ interface GraphVisualizerProps {
   height?: string;
 }
 
-// Expose these methods to parent component
+// Expose these methods to parent component - UPDATED with border support
 export interface GraphVisualizerHandle {
   applyLayout: (layoutKey: string) => void;
   resetView: () => void;
   exportImage: (format?: 'png' | 'jpg') => void;
   changeSelectedNodesColor: (color: string) => void;
+  changeSelectedNodesBorder: (borderColor: string, borderWidth: number) => void;
 }
 
 // Layout definitions with their configurations
@@ -162,11 +163,23 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
       if (cyRef.current) {
         const selectedNodes = cyRef.current.$(':selected').nodes();
         if (selectedNodes.length > 0) {
+          // Change background color but preserve border
           selectedNodes.style('background-color', color);
-          selectedNodes.style('border-color', color);
           console.log(`Changed color of ${selectedNodes.length} selected nodes to ${color}`);
         } else {
           console.log('No nodes selected for color change');
+        }
+      }
+    },
+    changeSelectedNodesBorder: (borderColor: string, borderWidth: number) => {
+      if (cyRef.current) {
+        const selectedNodes = cyRef.current.$(':selected').nodes();
+        if (selectedNodes.length > 0) {
+          selectedNodes.style('border-color', borderColor);
+          selectedNodes.style('border-width', `${borderWidth}px`);
+          console.log(`Changed border of ${selectedNodes.length} selected nodes to ${borderColor} with width ${borderWidth}px`);
+        } else {
+          console.log('No nodes selected for border change');
         }
       }
     }
@@ -233,9 +246,13 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
         {
           selector: 'node:selected',
           style: {
-            'background-color': isDarkMode ? '#EF4444' : '#DC2626',
-            'border-color': isDarkMode ? '#B91C1C' : '#991B1B',
-            'border-width': '3px'
+            // Keep border visible when selected with RED color
+            'border-width': '4px',
+            'border-color': '#FF0000', // Bright red border for selected nodes
+            'border-style': 'solid',
+            // Add an overlay color to make selection more visible
+            'overlay-color': '#FF0000', // Bright red overlay
+            'overlay-opacity': 0.15
           }
         },
         {
@@ -258,9 +275,9 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
         {
           selector: 'edge:selected',
           style: {
-            'line-color': isDarkMode ? '#EF4444' : '#DC2626',
-            'target-arrow-color': isDarkMode ? '#EF4444' : '#DC2626',
-            'width': 3
+            'line-color': '#FF0000', // Bright red for selected edges
+            'target-arrow-color': '#FF0000', // Bright red arrows
+            'width': 4
           }
         }
       ],
@@ -270,7 +287,7 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
       wheelSensitivity: 5,
       userPanningEnabled: true,
       boxSelectionEnabled: true,
-      selectionType: 'single',
+      selectionType: 'additive', // Changed to additive to allow multiple selection
       // Performance options for large graphs
       hideEdgesOnViewport: data.edges.length > 100,
       hideLabelsOnViewport: data.nodes.length > 50,
@@ -286,6 +303,17 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
     cyRef.current.on('tap', 'edge', (event) => {
       const edge = event.target;
       console.log('Edge clicked:', edge.data());
+    });
+
+    // Add event listener for selection changes to show visual feedback
+    cyRef.current.on('select', 'node', (event) => {
+      const node = event.target;
+      console.log('Node selected:', node.data().id);
+    });
+
+    cyRef.current.on('unselect', 'node', (event) => {
+      const node = event.target;
+      console.log('Node unselected:', node.data().id);
     });
 
     // Fit the graph to the container
