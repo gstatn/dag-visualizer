@@ -92,7 +92,7 @@ const AVAILABLE_LAYOUTS = {
     config: {
       name: 'cose',
       idealEdgeLength: 80,
-      nodeOverlap: 10, //  Node repulsion (overlapping) multiplier
+      nodeOverlap: 10,
       refresh: 10,
       fit: true,
       padding: 20,
@@ -100,11 +100,11 @@ const AVAILABLE_LAYOUTS = {
       componentSpacing: 80,
       nodeRepulsion: 200000,
       edgeElasticity: 50,
-      nestingFactor: 1, // controls clusters the higher the more pull toward center
+      nestingFactor: 1,
       gravity: 40,
       numIter: 600,
-      initialTemp: 100, // Initial temperature (maximum node displacement)
-      coolingFactor: 0.9,  // Cooling factor (how the temperature is reduced between consecutive iterations
+      initialTemp: 100,
+      coolingFactor: 0.9,
       minTemp: 1.0,
       animate: false
     } as cytoscape.LayoutOptions
@@ -118,17 +118,25 @@ interface OriginalNodeStyle {
   borderWidth: string;
   opacity: number;
   shape: string;
+  width: string;
+  height: string;
+}
+
+// Resize handle interface
+interface ResizeHandle {
+  id: string;
+  nodeId: string;
+  position: 'tl' | 'tr' | 'bl' | 'br'; // top-left, top-right, bottom-left, bottom-right
+  x: number;
+  y: number;
 }
 
 // Helper function to convert our shape names to Cytoscape shape names
 const convertShapeToCytoscape = (shape: 'circle' | 'rectangle' | 'diamond' | 'ellipse' | 'square'): string => {
   console.log('Converting shape:', shape);
-  // Cytoscape.js supported shapes: ellipse, triangle, rectangle, roundrectangle, 
-  // bottomroundrectangle, cutrectangle, barrel, rhomboid, diamond, pentagon, 
-  // hexagon, concavehexagon, heptagon, octagon, star, tag, vee
   switch (shape) {
     case 'circle':
-      return 'ellipse'; // Will be made circular with equal width/height
+      return 'ellipse';
     case 'rectangle':
       return 'rectangle';
     case 'diamond':
@@ -136,10 +144,23 @@ const convertShapeToCytoscape = (shape: 'circle' | 'rectangle' | 'diamond' | 'el
     case 'ellipse':
       return 'ellipse';
     case 'square':
-      return 'rectangle'; // Will be made square with equal width/height
+      return 'rectangle';
     default:
       console.warn('Unknown shape:', shape, 'defaulting to ellipse');
       return 'ellipse';
+  }
+};
+
+// Helper function to get shape constraints
+const getShapeConstraints = (shape: string) => {
+  switch (shape) {
+    case 'circle':
+    case 'square':
+      return { maintainAspectRatio: true, minSize: 30, maxSize: 200 };
+    case 'diamond':
+      return { maintainAspectRatio: true, minSize: 30, maxSize: 200 };
+    default:
+      return { maintainAspectRatio: false, minSize: 30, maxSize: 200 };
   }
 };
 
@@ -158,8 +179,22 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
 
   // Store original styles for reset functionality
   const originalStyles = useRef<Map<string, OriginalNodeStyle>>(new Map());
+  
+  // Resize state
+  const [resizeHandles, setResizeHandles] = useState<ResizeHandle[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragState, setDragState] = useState<{
+    handleId: string;
+    nodeId: string;
+    position: string;
+    startX: number;
+    startY: number;
+    originalWidth: number;
+    originalHeight: number;
+    shape: string;
+  } | null>(null);
 
-  // Function to store original node styles - UPDATED with shape
+  // Function to store original node styles - UPDATED with dimensions
   const storeOriginalStyles = (cy: cytoscape.Core) => {
     cy.nodes().forEach(node => {
       const nodeId = node.id();
@@ -168,7 +203,9 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
         borderColor: node.style('border-color'),
         borderWidth: node.style('border-width'),
         opacity: parseFloat(node.style('opacity')) || 1,
-        shape: node.style('shape')
+        shape: node.style('shape'),
+        width: node.style('width'),
+        height: node.style('height')
       });
     });
   };
@@ -185,7 +222,6 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
         opacity: parseFloat(node.style('opacity')) || 1
       };
     } else if (selectedNodes.length > 1) {
-      // Multiple nodes selected - could return average values or first node's values
       const firstNode = selectedNodes[0];
       return {
         backgroundColor: firstNode.style('background-color'),
@@ -197,12 +233,165 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
     return null;
   };
 
-  // Expose methods to parent component via ref - UPDATED with shape functionality
+  // Function to create resize handles for selected nodes
+  const createResizeHandles = (cy: cytoscape.Core) => {
+    const selectedNodes = cy.$(':selected').nodes();
+    const handles: ResizeHandle[] = [];
+
+    selectedNodes.forEach(node => {
+      const bb = node.renderedBoundingBox();
+      const nodeId = node.id();
+      
+      // Create 4 corner handles
+      const positions = [
+        { pos: 'tl' as const, x: bb.x1, y: bb.y1 },
+        { pos: 'tr' as const, x: bb.x2, y: bb.y1 },
+        { pos: 'bl' as const, x: bb.x1, y: bb.y2 },
+        { pos: 'br' as const, x: bb.x2, y: bb.y2 }
+      ];
+
+      positions.forEach(({ pos, x, y }) => {
+        handles.push({
+          id: `${nodeId}-${pos}`,
+          nodeId,
+          position: pos,
+          x,
+          y
+        });
+      });
+    });
+
+    setResizeHandles(handles);
+  };
+
+  // Function to clear resize handles
+  const clearResizeHandles = () => {
+    setResizeHandles([]);
+  };
+
+  // Function to handle mouse down on resize handle
+  const handleResizeStart = (handleId: string, nodeId: string, position: string, event: MouseEvent) => {
+    if (!cyRef.current) return;
+    
+    event.preventDefault();
+    event.stopPropagation();
+
+    const node = cyRef.current.getElementById(nodeId);
+    if (!node.length) return;
+
+    const currentWidth = parseFloat(node.style('width'));
+    const currentHeight = parseFloat(node.style('height'));
+    const shape = node.data('originalShape') || node.style('shape');
+
+    setIsDragging(true);
+    setDragState({
+      handleId,
+      nodeId,
+      position,
+      startX: event.clientX,
+      startY: event.clientY,
+      originalWidth: currentWidth,
+      originalHeight: currentHeight,
+      shape
+    });
+
+    // Disable cytoscape panning during resize
+    cyRef.current.panningEnabled(false);
+    cyRef.current.zoomingEnabled(false);
+  };
+
+  // Function to handle mouse move during resize
+  const handleResizeMove = (event: MouseEvent) => {
+    if (!isDragging || !dragState || !cyRef.current) return;
+
+    event.preventDefault();
+
+    const deltaX = event.clientX - dragState.startX;
+    const deltaY = event.clientY - dragState.startY;
+    
+    // Get zoom level to adjust sensitivity
+    const zoom = cyRef.current.zoom();
+    const adjustedDeltaX = deltaX / zoom;
+    const adjustedDeltaY = deltaY / zoom;
+
+    // Calculate new dimensions based on handle position and shape constraints
+    let newWidth = dragState.originalWidth;
+    let newHeight = dragState.originalHeight;
+
+    const constraints = getShapeConstraints(dragState.shape);
+    const sensitivity = 2; // Reduce sensitivity for smoother resize
+
+    // Apply resize based on handle position
+    switch (dragState.position) {
+      case 'br': // bottom-right
+        newWidth = Math.max(constraints.minSize, Math.min(constraints.maxSize, 
+          dragState.originalWidth + adjustedDeltaX / sensitivity));
+        newHeight = Math.max(constraints.minSize, Math.min(constraints.maxSize, 
+          dragState.originalHeight + adjustedDeltaY / sensitivity));
+        break;
+      case 'bl': // bottom-left
+        newWidth = Math.max(constraints.minSize, Math.min(constraints.maxSize, 
+          dragState.originalWidth - adjustedDeltaX / sensitivity));
+        newHeight = Math.max(constraints.minSize, Math.min(constraints.maxSize, 
+          dragState.originalHeight + adjustedDeltaY / sensitivity));
+        break;
+      case 'tr': // top-right
+        newWidth = Math.max(constraints.minSize, Math.min(constraints.maxSize, 
+          dragState.originalWidth + adjustedDeltaX / sensitivity));
+        newHeight = Math.max(constraints.minSize, Math.min(constraints.maxSize, 
+          dragState.originalHeight - adjustedDeltaY / sensitivity));
+        break;
+      case 'tl': // top-left
+        newWidth = Math.max(constraints.minSize, Math.min(constraints.maxSize, 
+          dragState.originalWidth - adjustedDeltaX / sensitivity));
+        newHeight = Math.max(constraints.minSize, Math.min(constraints.maxSize, 
+          dragState.originalHeight - adjustedDeltaY / sensitivity));
+        break;
+    }
+
+    // Maintain aspect ratio for certain shapes
+    if (constraints.maintainAspectRatio) {
+      const aspectRatio = dragState.originalWidth / dragState.originalHeight;
+      if (Math.abs(adjustedDeltaX) > Math.abs(adjustedDeltaY)) {
+        newHeight = newWidth / aspectRatio;
+      } else {
+        newWidth = newHeight * aspectRatio;
+      }
+    }
+
+    // Apply the new dimensions
+    const node = cyRef.current.getElementById(dragState.nodeId);
+    node.style({
+      'width': `${newWidth}px`,
+      'height': `${newHeight}px`
+    });
+
+    // Update resize handles positions
+    createResizeHandles(cyRef.current);
+  };
+
+  // Function to handle mouse up to end resize
+  const handleResizeEnd = () => {
+    if (!cyRef.current) return;
+
+    setIsDragging(false);
+    setDragState(null);
+
+    // Re-enable cytoscape panning
+    cyRef.current.panningEnabled(true);
+    cyRef.current.zoomingEnabled(true);
+
+    // Update handles one final time
+    createResizeHandles(cyRef.current);
+  };
+
+  // Expose methods to parent component via ref
   useImperativeHandle(ref, () => ({
     applyLayout: (layoutKey: string) => {
       if (!cyRef.current || isLayoutRunning) return;
       
       setIsLayoutRunning(true);
+      clearResizeHandles(); // Clear handles during layout change
       
       const layoutConfig = AVAILABLE_LAYOUTS[layoutKey as keyof typeof AVAILABLE_LAYOUTS]?.config;
       if (!layoutConfig) return;
@@ -213,6 +402,11 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
         setIsLayoutRunning(false);
         if (cyRef.current) {
           cyRef.current.fit();
+          // Recreate handles for selected nodes after layout
+          const selectedNodes = cyRef.current.$(':selected').nodes();
+          if (selectedNodes.length > 0) {
+            createResizeHandles(cyRef.current);
+          }
         }
       });
       
@@ -222,6 +416,10 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
       if (cyRef.current) {
         cyRef.current.fit();
         cyRef.current.center();
+        // Update handle positions after view reset
+        if (resizeHandles.length > 0) {
+          createResizeHandles(cyRef.current);
+        }
       }
     },
     exportImage: (format: 'png' | 'jpg' = 'png') => {
@@ -249,7 +447,6 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
           selectedNodes.style('background-color', color);
           console.log(`Changed color of ${selectedNodes.length} selected nodes to ${color}`);
           
-          // Update customization panel with new data
           if (onNodeSelectionChange) {
             onNodeSelectionChange(getSelectedNodeData(cyRef.current));
           }
@@ -266,7 +463,6 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
           selectedNodes.style('border-width', `${borderWidth}px`);
           console.log(`Changed border of ${selectedNodes.length} selected nodes to ${borderColor} with width ${borderWidth}px`);
           
-          // Update customization panel with new data
           if (onNodeSelectionChange) {
             onNodeSelectionChange(getSelectedNodeData(cyRef.current));
           }
@@ -282,7 +478,6 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
           selectedNodes.style('opacity', opacity);
           console.log(`Changed opacity of ${selectedNodes.length} selected nodes to ${opacity}`);
           
-          // Update customization panel with new data
           if (onNodeSelectionChange) {
             onNodeSelectionChange(getSelectedNodeData(cyRef.current));
           }
@@ -305,48 +500,38 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
           selectedNodes.forEach((node, index) => {
             console.log(`Processing node ${index + 1}:`, node.id());
             
-            // Apply shape directly - one property at a time to ensure it works
+            // Store original shape for constraints
+            node.data('originalShape', shape);
+            
+            // Apply shape
             node.style('shape', cytoscapeShape);
             
-            // Set dimensions based on shape
-            if (shape === 'square') {
+            // Set dimensions based on shape with constraints
+            const constraints = getShapeConstraints(shape);
+            if (constraints.maintainAspectRatio) {
               node.style('width', '60px');
               node.style('height', '60px');
-            } 
-            else if (shape === 'circle') {
-              node.style('width', '60px');
-              node.style('height', '60px');
-            }
-            else if (shape === 'ellipse') {
+            } else if (shape === 'ellipse') {
               node.style('width', '80px');
               node.style('height', '50px');
-            }
-            else if (shape === 'rectangle') {
+            } else if (shape === 'rectangle') {
               node.style('width', '80px');
               node.style('height', '50px');
-            }
-            else if (shape === 'diamond') {
-              node.style('width', '60px');
-              node.style('height', '60px');
             }
             
             console.log(`Applied shape to node ${node.id()}: ${cytoscapeShape}`);
-            console.log(`Node ${node.id()} current shape after change:`, node.style('shape'));
-            console.log(`Node ${node.id()} current width:`, node.style('width'));
-            console.log(`Node ${node.id()} current height:`, node.style('height'));
           });
           
-          // Force multiple re-renders to ensure the change is visible
+          // Update resize handles for new shape
           setTimeout(() => {
             if (cyRef.current) {
               cyRef.current.forceRender();
-              cyRef.current.resize();
+              createResizeHandles(cyRef.current);
             }
           }, 10);
           
           console.log(`✅ Changed shape of ${selectedNodes.length} selected nodes to ${shape}`);
           
-          // Update customization panel with new data
           if (onNodeSelectionChange) {
             onNodeSelectionChange(getSelectedNodeData(cyRef.current));
           }
@@ -370,20 +555,43 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
             node.style('border-width', originalStyle.borderWidth);
             node.style('opacity', originalStyle.opacity);
             node.style('shape', originalStyle.shape);
-            // Reset dimensions to default
-            node.style('width', '60px');
-            node.style('height', '60px');
+            node.style('width', originalStyle.width);
+            node.style('height', originalStyle.height);
+            // Clear stored shape data
+            node.removeData('originalShape');
           }
         });
         console.log(`Reset all ${allNodes.length} nodes to original style`);
         
-        // Update customization panel after reset
+        // Clear resize handles and update selection
+        clearResizeHandles();
         if (onNodeSelectionChange) {
           onNodeSelectionChange(getSelectedNodeData(cyRef.current));
         }
       }
     }
   }));
+
+  // Add global mouse event listeners for resize functionality
+  useEffect(() => {
+    const handleGlobalMouseMove = (event: MouseEvent) => {
+      handleResizeMove(event);
+    };
+
+    const handleGlobalMouseUp = () => {
+      handleResizeEnd();
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [isDragging, dragState]);
 
   // Initialize or update the graph when data changes
   useEffect(() => {
@@ -392,6 +600,7 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
     }
 
     setIsLoading(true);
+    clearResizeHandles(); // Clear handles when data changes
 
     // Destroy existing instance
     if (cyRef.current) {
@@ -442,18 +651,16 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
             'text-wrap': 'wrap',
             'text-max-width': '80px',
             'opacity': 1,
-            'shape': 'ellipse' // Default shape
+            'shape': 'ellipse'
           }
         },
         {
           selector: 'node:selected',
           style: {
-            // Keep border visible when selected with RED color
             'border-width': '4px',
-            'border-color': '#FF0000', // Bright red border for selected nodes
+            'border-color': '#FF0000',
             'border-style': 'solid',
-            // Add an overlay color to make selection more visible
-            'overlay-color': '#FF0000', // Bright red overlay
+            'overlay-color': '#FF0000',
             'overlay-opacity': 0.15
           }
         },
@@ -477,20 +684,18 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
         {
           selector: 'edge:selected',
           style: {
-            'line-color': '#FF0000', // Bright red for selected edges
-            'target-arrow-color': '#FF0000', // Bright red arrows
+            'line-color': '#FF0000',
+            'target-arrow-color': '#FF0000',
             'width': 4
           }
         }
       ],
       layout: AVAILABLE_LAYOUTS[currentLayout as keyof typeof AVAILABLE_LAYOUTS]?.config || AVAILABLE_LAYOUTS.dagre.config,
-      // Interaction options
       userZoomingEnabled: true,
       wheelSensitivity: 5,
       userPanningEnabled: true,
       boxSelectionEnabled: true,
-      selectionType: 'additive', // Changed to additive to allow multiple selection
-      // Performance options for large graphs
+      selectionType: 'additive',
       hideEdgesOnViewport: data.edges.length > 100,
       hideLabelsOnViewport: data.nodes.length > 50,
       pixelRatio: 'auto'
@@ -510,12 +715,14 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
       console.log('Edge clicked:', edge.data());
     });
 
-    // Add event listener for selection changes to update customization panel
+    // Add event listener for selection changes
     cyRef.current.on('select', 'node', (event) => {
       const node = event.target;
       console.log('Node selected:', node.data().id);
       
-      // Update customization panel with selected node data
+      // Create resize handles for selected nodes
+      createResizeHandles(cyRef.current!);
+      
       if (onNodeSelectionChange) {
         onNodeSelectionChange(getSelectedNodeData(cyRef.current!));
       }
@@ -525,7 +732,9 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
       const node = event.target;
       console.log('Node unselected:', node.data().id);
       
-      // Update customization panel with remaining selected node data
+      // Update resize handles
+      createResizeHandles(cyRef.current!);
+      
       if (onNodeSelectionChange) {
         onNodeSelectionChange(getSelectedNodeData(cyRef.current!));
       }
@@ -533,18 +742,24 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
 
     // Add event listener for clicking empty space to clear selection
     cyRef.current.on('tap', (event) => {
-      // Only trigger if clicking on the background (not on a node or edge)
       if (event.target === cyRef.current) {
         console.log('Background clicked - clearing selection');
+        clearResizeHandles();
         if (onNodeSelectionChange) {
           onNodeSelectionChange(null);
         }
       }
     });
 
+    // Update resize handles on viewport changes (zoom/pan)
+    cyRef.current.on('viewport', () => {
+      if (resizeHandles.length > 0 && cyRef.current) {
+        createResizeHandles(cyRef.current);
+      }
+    });
+
     // Fit the graph to the container
     cyRef.current.fit();
-
     setIsLoading(false);
 
     // Cleanup function
@@ -553,6 +768,7 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
         cyRef.current.destroy();
         cyRef.current = null;
       }
+      clearResizeHandles();
     };
   }, [data, isDarkMode, currentLayout, onNodeSelectionChange]);
 
@@ -562,12 +778,16 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
       if (cyRef.current) {
         cyRef.current.resize();
         cyRef.current.fit();
+        // Update resize handles after container resize
+        if (resizeHandles.length > 0) {
+          createResizeHandles(cyRef.current);
+        }
       }
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [resizeHandles.length]);
 
   return (
     <div className="relative">
@@ -593,6 +813,20 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
           minHeight: "500px"
         }}
       />
+
+      {/* Resize handles overlay */}
+      {resizeHandles.map((handle) => (
+        <div
+          key={handle.id}
+          className="absolute w-3 h-3 bg-blue-500 border-2 border-white rounded-full cursor-pointer shadow-lg hover:bg-blue-600 transition-colors z-20"
+          style={{
+            left: handle.x - 6, // Center the handle
+            top: handle.y - 6,
+            cursor: handle.position === 'tl' || handle.position === 'br' ? 'nw-resize' : 'ne-resize'
+          }}
+          onMouseDown={(e) => handleResizeStart(handle.id, handle.nodeId, handle.position, e.nativeEvent)}
+        />
+      ))}
     </div>
   );
 });
