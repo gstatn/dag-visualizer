@@ -16,13 +16,14 @@ interface GraphVisualizerProps {
   height?: string;
 }
 
-// Expose these methods to parent component - UPDATED with border support
+// Expose these methods to parent component - UPDATED with proper reset functionality
 export interface GraphVisualizerHandle {
   applyLayout: (layoutKey: string) => void;
   resetView: () => void;
   exportImage: (format?: 'png' | 'jpg') => void;
   changeSelectedNodesColor: (color: string) => void;
   changeSelectedNodesBorder: (borderColor: string, borderWidth: number) => void;
+  resetAllNodesToOriginal: () => void;
 }
 
 // Layout definitions with their configurations
@@ -102,6 +103,13 @@ const AVAILABLE_LAYOUTS = {
   }
 } as const;
 
+// Type for storing original node styles
+interface OriginalNodeStyle {
+  backgroundColor: string;
+  borderColor: string;
+  borderWidth: string;
+}
+
 const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(({ 
   data, 
   isDarkMode, 
@@ -113,6 +121,21 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
   const cyRef = useRef<cytoscape.Core | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLayoutRunning, setIsLayoutRunning] = useState(false);
+
+  // Store original styles for reset functionality
+  const originalStyles = useRef<Map<string, OriginalNodeStyle>>(new Map());
+
+  // Function to store original node styles
+  const storeOriginalStyles = (cy: cytoscape.Core) => {
+    cy.nodes().forEach(node => {
+      const nodeId = node.id();
+      originalStyles.current.set(nodeId, {
+        backgroundColor: node.style('background-color'),
+        borderColor: node.style('border-color'),
+        borderWidth: node.style('border-width')
+      });
+    });
+  };
 
   // Expose methods to parent component via ref
   useImperativeHandle(ref, () => ({
@@ -181,6 +204,21 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
         } else {
           console.log('No nodes selected for border change');
         }
+      }
+    },
+    resetAllNodesToOriginal: () => {
+      if (cyRef.current) {
+        const allNodes = cyRef.current.nodes();
+        allNodes.forEach(node => {
+          const nodeId = node.id();
+          const originalStyle = originalStyles.current.get(nodeId);
+          if (originalStyle) {
+            node.style('background-color', originalStyle.backgroundColor);
+            node.style('border-color', originalStyle.borderColor);
+            node.style('border-width', originalStyle.borderWidth);
+          }
+        });
+        console.log(`Reset all ${allNodes.length} nodes to original style`);
       }
     }
   }));
@@ -293,6 +331,9 @@ const GraphVisualizer = forwardRef<GraphVisualizerHandle, GraphVisualizerProps>(
       hideLabelsOnViewport: data.nodes.length > 50,
       pixelRatio: 'auto'
     });
+
+    // Store original styles after creating the graph
+    storeOriginalStyles(cyRef.current);
 
     // Add event listeners
     cyRef.current.on('tap', 'node', (event) => {

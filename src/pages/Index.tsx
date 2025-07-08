@@ -74,6 +74,13 @@ const Index = () => {
     }
   };
 
+  // NEW: Handle reset ALL nodes to original style
+  const handleResetNodes = () => {
+    if (graphVisualizerRef.current) {
+      graphVisualizerRef.current.resetAllNodesToOriginal();
+    }
+  };
+
   if (isDarkMode) {
     document.documentElement.classList.add('dark');
   } else {
@@ -389,13 +396,14 @@ const Index = () => {
         </Dialog>
       </div>
 
-      {/* CUSTOMIZATION PANEL - Now with border change support */}
+      {/* CUSTOMIZATION PANEL - Now with border change support and reset */}
       <CustomizationPanel 
         isOpen={isCustomizationOpen}
         onClose={() => setIsCustomizationOpen(false)}
         isDarkMode={isDarkMode}
         onColorChange={handleColorChange}
         onBorderChange={handleBorderChange}
+        onResetNodes={handleResetNodes}
       />
 
       {/* FILE UPLOAD MODAL */}

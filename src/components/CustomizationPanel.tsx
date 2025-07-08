@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { X, ChevronLeft, ChevronRight, Square, Diamond, Circle, Bold, Italic, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface CustomizationPanelProps {
@@ -7,6 +7,7 @@ interface CustomizationPanelProps {
   isDarkMode: boolean;
   onColorChange?: (color: string) => void;
   onBorderChange?: (borderColor: string, borderWidth: number) => void;
+  onResetNodes?: () => void;
 }
 
 const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
@@ -14,7 +15,8 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
   onClose,
   isDarkMode,
   onColorChange,
-  onBorderChange
+  onBorderChange,
+  onResetNodes
 }) => {
   const [activeTab, setActiveTab] = useState<'Style' | 'Text'>('Style');
   const [currentColorPage, setCurrentColorPage] = useState(0);
@@ -104,23 +106,41 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     }
   };
 
-  // Handle border color input change - FIXED to prevent losing focus
-  const handleBorderColorInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle border color input change - FIXED with useCallback and real-time update
+  const handleBorderColorInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value;
     setCustomBorderColor(newColor);
-  };
+    // Apply border change in real-time
+    if (onBorderChange && isValidColor(newColor)) {
+      onBorderChange(newColor, borderWidth);
+    }
+  }, [borderWidth, onBorderChange]);
 
-  // Handle border width input change - FIXED to prevent losing focus
-  const handleBorderWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newWidth = parseInt(e.target.value) || 1;
-    setBorderWidth(newWidth);
-  };
+  // Handle border width input change - FIXED with useCallback and real-time update
+  const handleBorderWidthChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const numValue = parseInt(value) || 0;
+    setBorderWidth(numValue);
+    // Apply border change in real-time
+    if (onBorderChange && numValue >= 0) {
+      onBorderChange(customBorderColor, numValue);
+    }
+  }, [customBorderColor, onBorderChange]);
 
-  // Handle custom node color input change - FIXED to prevent losing focus
-  const handleCustomNodeColorInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle custom node color input change - FIXED with useCallback
+  const handleCustomNodeColorInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setCustomNodeColor(e.target.value);
+  }, []);
+
+  // Handle border color picker change - real-time update
+  const handleBorderColorPickerChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value;
-    setCustomNodeColor(newColor);
-  };
+    setCustomBorderColor(newColor);
+    // Apply border change in real-time
+    if (onBorderChange) {
+      onBorderChange(newColor, borderWidth);
+    }
+  }, [borderWidth, onBorderChange]);
 
   // Dropdown component
   const DropdownSection = ({ title, isOpen, onToggle, children }: {
@@ -194,6 +214,18 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
 
       {/* Content area */}
       <div className="p-4 h-full overflow-y-auto space-y-4">
+        {/* Reset Button - At the top of the panel */}
+        <button
+          onClick={() => onResetNodes && onResetNodes()}
+          className={`w-full py-2 px-3 text-sm rounded transition-colors ${
+            isDarkMode 
+              ? 'bg-gray-600 text-white hover:bg-gray-700' 
+              : 'bg-gray-500 text-white hover:bg-gray-600'
+          }`}
+        >
+          Reset to Original Style
+        </button>
+
         {activeTab === 'Style' && (
           <>
             {/* Node Color Section */}
@@ -313,7 +345,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                     <input
                       type="color"
                       value={customBorderColor}
-                      onChange={(e) => setCustomBorderColor(e.target.value)}
+                      onChange={handleBorderColorPickerChange}
                       className="w-16 h-10 rounded border border-gray-400 cursor-pointer"
                     />
                     <input
@@ -349,18 +381,6 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                     <span className="text-sm">px</span>
                   </div>
                 </div>
-
-                {/* Apply Border Button */}
-                <button
-                  onClick={() => handleBorderChange()}
-                  className={`w-full py-2 px-3 text-sm rounded transition-colors ${
-                    isDarkMode 
-                      ? 'bg-green-600 text-white hover:bg-green-700' 
-                      : 'bg-green-500 text-white hover:bg-green-600'
-                  }`}
-                >
-                  Apply Border Settings
-                </button>
               </div>
             </DropdownSection>
 
