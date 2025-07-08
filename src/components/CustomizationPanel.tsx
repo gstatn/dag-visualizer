@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Square, Diamond, Circle, Bold, Italic, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { X, ChevronLeft, ChevronRight, Square, Diamond, Circle, Bold, Italic, ChevronDown, ChevronUp, RectangleHorizontal } from 'lucide-react';
 
 interface CustomizationPanelProps {
   isOpen: boolean;
@@ -7,6 +7,7 @@ interface CustomizationPanelProps {
   isDarkMode: boolean;
   onColorChange?: (color: string) => void;
   onBorderChange?: (borderColor: string, borderWidth: number) => void;
+  onShapeChange?: (shape: 'circle' | 'rectangle' | 'diamond' | 'ellipse' | 'square') => void;
   onResetNodes?: () => void;
 }
 
@@ -16,16 +17,32 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
   isDarkMode,
   onColorChange,
   onBorderChange,
+  onShapeChange,
   onResetNodes
 }) => {
+  // Debug: Log when component receives props
+  useEffect(() => {
+    console.log('CustomizationPanel: Received props:', {
+      isOpen,
+      onColorChange: !!onColorChange,
+      onBorderChange: !!onBorderChange,
+      onShapeChange: !!onShapeChange,
+      onResetNodes: !!onResetNodes
+    });
+  }, [isOpen, onColorChange, onBorderChange, onShapeChange, onResetNodes]);
   const [activeTab, setActiveTab] = useState<'Style' | 'Text'>('Style');
   const [currentColorPage, setCurrentColorPage] = useState(0);
-  const [selectedShape, setSelectedShape] = useState<'square' | 'diamond' | 'ellipse'>('square');
+  const [selectedShape, setSelectedShape] = useState<'circle' | 'rectangle' | 'diamond' | 'ellipse' | 'square'>('circle');
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
   const [selectedFont, setSelectedFont] = useState('Arial');
-  const [customNodeColor, setCustomNodeColor] = useState('#FF0000');
-  const [customBorderColor, setCustomBorderColor] = useState('#000000');
+  
+  // Initialize with default graph colors based on theme
+  const getDefaultNodeColor = useCallback(() => isDarkMode ? '#3B82F6' : '#2563EB', [isDarkMode]);
+  const getDefaultBorderColor = useCallback(() => isDarkMode ? '#1E40AF' : '#1D4ED8', [isDarkMode]);
+  
+  const [customNodeColor, setCustomNodeColor] = useState(() => isDarkMode ? '#3B82F6' : '#2563EB');
+  const [customBorderColor, setCustomBorderColor] = useState(() => isDarkMode ? '#1E40AF' : '#1D4ED8');
   const [borderWidth, setBorderWidth] = useState(2);
   
   // Dropdown states (all open initially)
@@ -33,6 +50,12 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
   const [borderOpen, setBorderOpen] = useState(true);
   const [shapeOpen, setShapeOpen] = useState(true);
   const [opacityOpen, setOpacityOpen] = useState(true);
+
+  // Update colors when theme changes
+  useEffect(() => {
+    setCustomNodeColor(getDefaultNodeColor());
+    setCustomBorderColor(getDefaultBorderColor());
+  }, [isDarkMode, getDefaultNodeColor, getDefaultBorderColor]);
 
   // Color swatches data (mimicking the draw.io interface)
   const colorPages = [
@@ -54,14 +77,22 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
 
   const tabs = ['Style', 'Text'] as const;
 
-  const ShapeIcon = ({ shape }: { shape: 'square' | 'diamond' | 'ellipse' }) => {
+  const ShapeIcon = ({ shape }: { shape: 'circle' | 'rectangle' | 'diamond' | 'ellipse' | 'square' }) => {
     switch (shape) {
-      case 'square':
-        return <Square size={16} />;
+      case 'circle':
+        return <Circle size={16} />;
+      case 'rectangle':
+        return <RectangleHorizontal size={16} />;
       case 'diamond':
         return <Diamond size={16} />;
       case 'ellipse':
-        return <Circle size={16} />;
+        return (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+            <ellipse cx="8" cy="8" rx="6" ry="4" />
+          </svg>
+        );
+      case 'square':
+        return <Square size={16} />;
     }
   };
 
@@ -81,6 +112,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
       return;
     }
     
+    setCustomNodeColor(color); // Update the input field too
     if (onColorChange) {
       onColorChange(color);
     }
@@ -103,6 +135,27 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
       onBorderChange(finalBorderColor, finalWidth);
     } else {
       console.log('onBorderChange prop is not available');
+    }
+  };
+
+  // Handle shape change - NEW FUNCTION WITH PROPER LOGGING
+  const handleShapeClick = (shape: 'circle' | 'rectangle' | 'diamond' | 'ellipse' | 'square') => {
+    console.log('CustomizationPanel: Shape button clicked:', shape);
+    console.log('CustomizationPanel: onShapeChange function available:', !!onShapeChange);
+    
+    setSelectedShape(shape);
+    
+    if (onShapeChange) {
+      console.log('CustomizationPanel: Calling onShapeChange with shape:', shape);
+      try {
+        onShapeChange(shape);
+        console.log('CustomizationPanel: onShapeChange call completed successfully');
+      } catch (error) {
+        console.error('CustomizationPanel: Error calling onShapeChange:', error);
+      }
+    } else {
+      console.log('CustomizationPanel: onShapeChange prop is not available');
+      alert('Shape change function is not available. Please check the connection between components.');
     }
   };
 
@@ -129,8 +182,23 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
 
   // Handle custom node color input change - FIXED with useCallback
   const handleCustomNodeColorInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setCustomNodeColor(e.target.value);
-  }, []);
+    const newColor = e.target.value;
+    setCustomNodeColor(newColor);
+    // Apply color change in real-time if valid
+    if (onColorChange && isValidColor(newColor)) {
+      onColorChange(newColor);
+    }
+  }, [onColorChange]);
+
+  // Handle node color picker change - real-time update
+  const handleNodeColorPickerChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newColor = e.target.value;
+    setCustomNodeColor(newColor);
+    // Apply color change in real-time
+    if (onColorChange) {
+      onColorChange(newColor);
+    }
+  }, [onColorChange]);
 
   // Handle border color picker change - real-time update
   const handleBorderColorPickerChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -302,14 +370,14 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                     <input
                       type="color"
                       value={customNodeColor}
-                      onChange={(e) => setCustomNodeColor(e.target.value)}
+                      onChange={handleNodeColorPickerChange}
                       className="w-10 h-10 rounded border border-gray-400 cursor-pointer"
                     />
                     <input
                       type="text"
                       value={customNodeColor}
                       onChange={handleCustomNodeColorInputChange}
-                      placeholder="#FF0000"
+                      placeholder="#3B82F6"
                       className={`flex-1 min-w-0 px-2 py-2 text-sm border rounded ${
                         isDarkMode
                           ? 'bg-gray-800 border-gray-600 text-gray-300'
@@ -352,7 +420,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                       type="text"
                       value={customBorderColor}
                       onChange={handleBorderColorInputChange}
-                      placeholder="#000000"
+                      placeholder="#1E40AF"
                       className={`flex-1 px-2 py-2 text-sm border rounded ${
                         isDarkMode 
                           ? 'bg-gray-800 border-gray-600 text-gray-300' 
@@ -384,30 +452,69 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
               </div>
             </DropdownSection>
 
-            {/* Shape Section */}
+            {/* Shape Section - UPDATED WITH FUNCTIONAL BUTTONS */}
             <DropdownSection 
               title="Shape" 
               isOpen={shapeOpen} 
               onToggle={() => setShapeOpen(!shapeOpen)}
             >
-              <div className="grid grid-cols-3 gap-2">
-                {(['square', 'diamond', 'ellipse'] as const).map((shape) => (
-                  <button
-                    key={shape}
-                    onClick={() => setSelectedShape(shape)}
-                    className={`p-3 rounded border-2 transition-colors flex items-center justify-center ${
-                      selectedShape === shape
-                        ? isDarkMode
-                          ? 'border-blue-400 bg-blue-900/20 text-blue-400'
-                          : 'border-blue-500 bg-blue-50 text-blue-600'
-                        : isDarkMode
-                          ? 'border-gray-600 hover:border-gray-500 text-gray-400'
-                          : 'border-gray-300 hover:border-gray-400 text-gray-600'
-                    }`}
-                  >
-                    <ShapeIcon shape={shape} />
-                  </button>
-                ))}
+              <div className="space-y-3">                
+                {/* First row - 3 shapes */}
+                <div className="grid grid-cols-3 gap-2">
+                  {(['circle', 'rectangle', 'diamond'] as const).map((shape) => (
+                    <button
+                      key={shape}
+                      onClick={() => {
+                        console.log(`🔵 Shape button clicked: ${shape}`);
+                        handleShapeClick(shape);
+                      }}
+                      className={`p-3 rounded border-2 transition-all duration-200 flex items-center justify-center hover:scale-105 ${
+                        selectedShape === shape
+                          ? isDarkMode
+                            ? 'border-blue-400 bg-blue-900/30 text-blue-400 shadow-lg'
+                            : 'border-blue-500 bg-blue-50 text-blue-600 shadow-lg'
+                          : isDarkMode
+                            ? 'border-gray-600 hover:border-gray-500 text-gray-400 hover:bg-gray-800'
+                            : 'border-gray-300 hover:border-gray-400 text-gray-600 hover:bg-gray-50'
+                      }`}
+                      title={`Change selected nodes to ${shape} shape`}
+                    >
+                      <ShapeIcon shape={shape} />
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Second row - 2 shapes, centered */}
+                <div className="flex justify-center">
+                  <div className="grid grid-cols-2 gap-2 w-2/3">
+                    {(['ellipse', 'square'] as const).map((shape) => (
+                      <button
+                        key={shape}
+                        onClick={() => {
+                          console.log(`🔵 Shape button clicked: ${shape}`);
+                          handleShapeClick(shape);
+                        }}
+                        className={`p-3 rounded border-2 transition-all duration-200 flex items-center justify-center hover:scale-105 ${
+                          selectedShape === shape
+                            ? isDarkMode
+                              ? 'border-blue-400 bg-blue-900/30 text-blue-400 shadow-lg'
+                              : 'border-blue-500 bg-blue-50 text-blue-600 shadow-lg'
+                            : isDarkMode
+                              ? 'border-gray-600 hover:border-gray-500 text-gray-400 hover:bg-gray-800'
+                              : 'border-gray-300 hover:border-gray-400 text-gray-600 hover:bg-gray-50'
+                        }`}
+                        title={`Change selected nodes to ${shape} shape`}
+                      >
+                        <ShapeIcon shape={shape} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Shape feedback */}
+                <div className={`text-center text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Currently selected: <span className="font-semibold capitalize">{selectedShape}</span>
+                </div>
               </div>
             </DropdownSection>
 

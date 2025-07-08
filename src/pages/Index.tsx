@@ -67,14 +67,28 @@ const Index = () => {
     }
   };
 
-  // NEW: Handle border change for selected nodes
+  // Handle border change for selected nodes
   const handleBorderChange = (borderColor: string, borderWidth: number) => {
     if (graphVisualizerRef.current) {
       graphVisualizerRef.current.changeSelectedNodesBorder(borderColor, borderWidth);
     }
   };
 
-  // NEW: Handle reset ALL nodes to original style
+  // Handle shape change for selected nodes - FIXED: Now properly calls the GraphVisualizer method
+  const handleShapeChange = (shape: 'circle' | 'rectangle' | 'diamond' | 'ellipse' | 'square') => {
+    console.log('Index.tsx: handleShapeChange called with shape:', shape);
+    console.log('Index.tsx: graphVisualizerRef.current exists:', !!graphVisualizerRef.current);
+    
+    if (graphVisualizerRef.current) {
+      console.log('Index.tsx: Calling changeSelectedNodesShape on GraphVisualizer');
+      graphVisualizerRef.current.changeSelectedNodesShape(shape);
+    } else {
+      console.log('Index.tsx: graphVisualizerRef.current is null');
+      alert('Graph visualizer not ready. Please wait for the graph to load.');
+    }
+  };
+
+  // Handle reset ALL nodes to original style
   const handleResetNodes = () => {
     if (graphVisualizerRef.current) {
       graphVisualizerRef.current.resetAllNodesToOriginal();
@@ -381,6 +395,18 @@ const Index = () => {
                       </ul>
                     </div>
 
+                    <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                      <strong className={`block mb-2 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                        Customization Controls
+                      </strong>
+                      <ul className="space-y-1 text-xs">
+                        <li>• Select nodes and use Customize panel to change colors</li>
+                        <li>• Click shape buttons to change selected node shapes</li>
+                        <li>• Adjust border color and width in real-time</li>
+                        <li>• Reset button restores original node styles</li>
+                      </ul>
+                    </div>
+
                     <div className={`p-3 rounded-lg border-2 border-dashed ${
                       isDarkMode ? 'border-gray-600 bg-gray-800/50' : 'border-gray-300 bg-gray-50/50'
                     }`}>
@@ -396,13 +422,14 @@ const Index = () => {
         </Dialog>
       </div>
 
-      {/* CUSTOMIZATION PANEL - Now with border change support and reset */}
+      {/* CUSTOMIZATION PANEL - Now with proper shape change support */}
       <CustomizationPanel 
         isOpen={isCustomizationOpen}
         onClose={() => setIsCustomizationOpen(false)}
         isDarkMode={isDarkMode}
         onColorChange={handleColorChange}
         onBorderChange={handleBorderChange}
+        onShapeChange={handleShapeChange}
         onResetNodes={handleResetNodes}
       />
 
