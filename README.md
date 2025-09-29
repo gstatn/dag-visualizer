@@ -18,7 +18,7 @@
 ### Hierarchical Layout View
 *[Screenshot of the main interface with hierarchical DAG layout]*
 
-![Hierarchical Layout](images/breadthfirst_layout.png)
+![Hierarchical Layout](images/hierarchical_layout_view.png)
 
 ### Circular Layout with Customization Panel
 *[Screenshot showing circular layout and customization options]*
@@ -28,7 +28,7 @@
 ### Large Graph Visualization
 *[Screenshot of complex graph with 100+ nodes]*
 
-![Large Graph](images/hierarchical_layout_view.png)
+![Large Graph](images/breadthfirst_layout.png)
 
 ## Installation
 
