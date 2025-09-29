@@ -34,7 +34,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/gstatnikov/dag-visualizer.git
+git clone https://github.com/gstatn/dag-visualizer.git
 
 # Navigate to project directory
 cd dag-visualizer
@@ -123,7 +123,7 @@ Contributions welcome! Areas of focus:
 
 ```bash
 # Fork the repository
-git fork https://github.com/gstatnikov/dag-visualizer.git
+git fork https://github.com/gstatn/dag-visualizer.git
 
 # Create feature branch
 git checkout -b feature/awesome-feature
