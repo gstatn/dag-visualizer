@@ -77,48 +77,6 @@ Graph Edges:
 4. **Explore** - Pan, zoom, and interact with your graph
 5. **Export** - Save as PNG when ready
 
-## Roadmap
-
-### Customization Enhancements
-- [ ] Pre-load node-specific colors and shapes
-- [ ] SVG/PDF export with transparency
-- [ ] Multi-tab interface for graph comparison
-
-### Graph Analysis Tools
-- [ ] Subgraph extraction (k-hop neighborhoods)
-- [ ] Path analysis between variables
-- [ ] Node type-aware grouping
-- [ ] Interactive filtering and search
-
-### Causal Analysis Features
-- [ ] Backdoor criterion implementation
-- [ ] Front-door criterion support
-- [ ] Pearl's causal algorithms
-- [ ] Intervention target optimization
-- [ ] Weighted edge visualization
-
-### Data Integration
-- [ ] Multiple file format support
-- [ ] Statistical package integration
-- [ ] Model fit visualization
-- [ ] Batch processing capabilities
-
-## Technology Stack
-
-- **Frontend**: HTML5, CSS3, Vanilla JavaScript
-- **Visualization**: [Cytoscape.js](https://cytoscape.org/)
-- **Layouts**: Dagre, CoSE, and Cytoscape extensions
-- **File Handling**: Native File API
-
-## Contributing
-
-Contributions welcome! Areas of focus:
-
-- **Algorithm Implementation** - Causal analysis methods
-- **UI/UX Improvements** - Better user experience
-- **Performance** - Large graph optimization
-- **Documentation** - Code comments and examples
-
 ### Development Setup
 
 ```bash
@@ -126,13 +84,13 @@ Contributions welcome! Areas of focus:
 git fork https://github.com/gstatn/dag-visualizer.git
 
 # Create feature branch
-git checkout -b feature/awesome-feature
+git checkout -b feature/name-feature
 
 # Make changes and commit
-git commit -m "Add awesome feature"
+git commit -m "Add name feature"
 
 # Push to branch
-git push origin feature/awesome-feature
+git push origin feature/name-feature
 ```
 
 ## Related Projects
